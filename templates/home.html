@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block title %}Inicio | Sistema de Gestión de Mantenimiento{% endblock %}
+
+{% block content %}
+<div class="jumbotron bg-light border rounded p-5">
+    <h1 class="display-5">Sistema de Gestión de Mantenimiento</h1>
+    <p class="lead">
+        Base del sistema funcionando correctamente.
+    </p>
+    <hr class="my-4">
+    <p>
+        Plataforma para la gestión de mantenimiento de la infraestructura física
+        de las sucursales.
+    </p>
+    <a class="btn btn-primary btn-lg" href="{% url 'admin:index' %}" role="button">
+        Ir al administrador
+    </a>
+</div>
+{% endblock %}
