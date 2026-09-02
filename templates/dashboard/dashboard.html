@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load demo_extras %}
+
+{% block title %}Dashboard | SEMAXEL{% endblock %}
+
+{% block active_dashboard %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h4 class="mb-1">Dashboard</h4>
+            <span class="text-muted">Resumen del estado general del mantenimiento</span>
+        </div>
+        <a href="{% url 'tickets:crear' %}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i> Nuevo ticket
+        </a>
+    </div>
+
+    <!-- Indicadores -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card">
+                <div class="stat-icon bg-primary-soft"><i class="bi bi-inbox"></i></div>
+                <div class="stat-info">
+                    <div class="value">24</div>
+                    <div class="label">Tickets abiertos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#dc2626">
+                <div class="stat-icon bg-danger-soft"><i class="bi bi-exclamation-octagon"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ tickets_criticos }}</div>
+                    <div class="label">Tickets críticos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#d97706">
+                <div class="stat-icon bg-warning-soft"><i class="bi bi-gear"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ tickets_ejecucion }}</div>
+                    <div class="label">En ejecución</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#059669">
+                <div class="stat-icon bg-success-soft"><i class="bi bi-check2-circle"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ tickets_resueltos }}</div>
+                    <div class="label">Resueltos</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#7c3aed">
+                <div class="stat-icon bg-purple-soft"><i class="bi bi-briefcase"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ ofertas_disponibles }}</div>
+                    <div class="label">Ofertas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="stat-card" style="border-left-color:#0284c7">
+                <div class="stat-icon bg-info-soft"><i class="bi bi-list-check"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ ordenes_trabajo }}</div>
+                    <div class="label">Órdenes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <strong><i class="bi bi-pie-chart me-2"></i>Tickets por estado</strong>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartEstado" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <strong><i class="bi bi-bar-chart me-2"></i>Tickets por prioridad</strong>
+                </div>
+                <div class="card-body d-flex align-items-center">
+                    <canvas id="chartPrioridad" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <strong><i class="bi bi-shield-check me-2"></i>Cumplimiento SLA</strong>
+                </div>
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <div class="position-relative" style="width:150px;height:150px">
+                        <canvas id="chartSLA"></canvas>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center">
+                            <div class="fs-3 fw-bold">{{ cumplimiento_sla }}%</div>
+                            <small class="text-muted">SLA</small>
+                        </div>
+                    </div>
+                    <p class="text-muted small text-center mt-3 mb-0">Tickets respondidos dentro del plazo definido en el SLA.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tickets recientes -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <strong><i class="bi bi-clock-history me-2"></i>Actividad reciente</strong>
+                    <a href="{% url 'tickets:lista' %}" class="small">Ver todos <i class="bi bi-arrow-right"></i></a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>N°</th><th>Título</th><th>Sucursal</th><th>Prioridad</th><th>Estado</th><th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in tickets_recientes %}
+                            <tr>
+                                <td><a href="{% url 'tickets:detalle' t.numero %}"><strong>{{ t.numero }}</strong></a></td>
+                                <td>{{ t.titulo }}</td>
+                                <td>{{ t.sucursal }}</td>
+                                <td><span class="badge pill pr-{{ t.prioridad }}">{{ t.prioridad }}</span></td>
+                                <td>{% if t.estado %}<span class="badge pill bg-{{ t.estado }}">{{ t.estado|estado_label }}</span>{% else %}—{% endif %}</td>
+                                <td class="text-muted">{{ t.fecha }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="6" class="text-center text-muted py-4">Sin datos de demostración.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    new Chart(document.getElementById('chartEstado'), {
+        type: 'bar',
+        data: {
+            labels: ['Abiertos','En revisión','Publicados','En ejecución','Resueltos','Cerrados'],
+            datasets: [{
+                label: 'Tickets',
+                data: [24, 8, 5, 4, 12, 15],
+                backgroundColor: ['#0d6efd','#f59e0b','#8b5cf6','#4f46e5','#10b981','#6b7280']
+            }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    new Chart(document.getElementById('chartPrioridad'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Baja','Media','Alta','Crítica'],
+            datasets: [{
+                data: [18, 22, 12, 2],
+                backgroundColor: ['#6b7280','#f59e0b','#f97316','#dc2626']
+            }]
+        },
+        options: { responsive: true, cutout: '65%', plugins: { legend: { position: 'bottom' } } }
+    });
+
+    new Chart(document.getElementById('chartSLA'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Cumple','No cumple'],
+            datasets: [{
+                data: [{{ cumplimiento_sla }}, {{ 100|add:"-92" }}],
+                backgroundColor: ['#10b981','#e5e7eb']
+            }]
+        },
+        options: { responsive: true, cutout: '75%', plugins: { legend: { display: false } } }
+    });
+});
+</script>
+{% endblock %}

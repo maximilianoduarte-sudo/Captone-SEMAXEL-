@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load demo_extras %}
+
+{% block title %}Órdenes de trabajo | SEMAXEL{% endblock %}
+
+{% block active_ordenes %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item active" aria-current="page">Órdenes de trabajo</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-1">Órdenes de trabajo</h4>
+    <span class="text-muted d-block mb-4">Asignación y ejecución de trabajos de mantenimiento</span>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Estado</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Todos</option>
+                        {% for k, v in estados.items %}
+                        <option value="{{ k }}" {% if estado_seleccionado == k %}selected{% endif %}>{{ v }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small mb-1">Técnico</label>
+                    <select name="tecnico" class="form-select">
+                        <option value="">Todos</option>
+                        {% for t in tecnicos %}
+                        <option value="{{ t.nombre }}" {% if tecnico_seleccionado == t.nombre %}selected{% endif %}>{{ t.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-1 d-grid">
+                    <button class="btn btn-outline-primary" type="submit">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Ticket</th><th>Técnico</th><th>Sucursal</th>
+                        <th>Estado</th><th>Asignación</th><th>Inicio</th><th>Término</th><th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for o in ordenes %}
+                    <tr>
+                        <td><a href="{% url 'ordenes:detalle' o.id %}"><strong>#{{ o.id|stringformat:"05d" }}</strong></a></td>
+                        <td>{{ o.ticket }}</td>
+                        <td>{{ o.tecnico }}</td>
+                        <td>{{ o.sucursal }}</td>
+                        <td><span class="badge pill bg-{{ o.estado }}">{{ o.estado|estado_label }}</span></td>
+                        <td class="small">{{ o.asignacion }}</td>
+                        <td class="small">{{ o.inicio }}</td>
+                        <td class="small">{{ o.fin }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'ordenes:detalle' o.id %}" class="btn btn-sm btn-outline-secondary btn-action"><i class="bi bi-eye"></i></a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="9" class="text-center text-muted py-4">No se encontraron órdenes.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

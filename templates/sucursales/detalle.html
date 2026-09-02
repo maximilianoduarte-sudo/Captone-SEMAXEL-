@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ sucursal.nombre }} | SEMAXEL{% endblock %}
+
+{% block active_sucursales %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'sucursales:lista' %}">Sucursales</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ sucursal.nombre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h3 class="mb-0">{{ sucursal.nombre }}</h3>
+            {% if sucursal.estado == 'ACTIVA' %}
+            <span class="badge bg-success pill mt-1">Activa</span>
+            {% else %}
+            <span class="badge bg-secondary pill mt-1">Inactiva</span>
+            {% endif %}
+        </div>
+        <button class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i> Editar</button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-white"><strong>Datos de contacto</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="text-muted small">Dirección</div>
+                            <strong>{{ sucursal.direccion }}</strong>,
+                            {{ sucursal.ciudad }} - {{ sucursal.region }}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Teléfono</div>
+                            <strong>{{ sucursal.telefono }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Correo</div>
+                            <strong>{{ sucursal.correo }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Encargado</div>
+                            <strong>{{ sucursal.encargado }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Código</div>
+                            <span class="badge bg-secondary">{{ sucursal.codigo }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-white"><strong>Estadísticas</strong></div>
+                <div class="card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-4"><div class="fs-3 fw-bold">18</div><small class="text-muted">Tickets</small></div>
+                        <div class="col-4"><div class="fs-3 fw-bold">5</div><small class="text-muted">Abiertos</small></div>
+                        <div class="col-4"><div class="fs-3 fw-bold">94%</div><small class="text-muted">SLA</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

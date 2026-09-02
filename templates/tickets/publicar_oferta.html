@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load demo_extras %}
+
+{% block title %}Publicar oferta | SEMAXEL{% endblock %}
+
+{% block active_tickets %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'tickets:lista' %}">Tickets</a></li>
+<li class="breadcrumb-item"><a href="{% url 'tickets:detalle' ticket.numero %}">{{ ticket.numero }}</a></li>
+<li class="breadcrumb-item active" aria-current="page">Publicar oferta</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-4">Publicar oferta de trabajo</h4>
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card mb-3">
+                <div class="card-header bg-white"><strong>Información del ticket</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="text-muted small">Número</div>
+                            <strong>{{ ticket.numero }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Sucursal</div>
+                            <strong>{{ ticket.sucursal }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Categoría</div>
+                            <strong>{{ ticket.categoria }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Prioridad</div>
+                            <span class="badge pill pr-{{ ticket.prioridad }}">{{ ticket.prioridad|prioridad_label }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Estado</div>
+                            <span class="badge pill bg-{{ ticket.estado }}">{{ ticket.estado|estado_label }}</span>
+                        </div>
+                        <div class="col-12">
+                            <div class="text-muted small mb-1">Descripción</div>
+                            <p class="mb-0">{{ ticket.descripcion }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-white"><strong>Configuración de la oferta</strong></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha de vencimiento</label>
+                                <input type="datetime-local" class="form-control" name="vencimiento">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Especialidad requerida</label>
+                                <select class="form-select" name="especialidad">
+                                    <option>Electricidad</option>
+                                    <option>Gasfitería</option>
+                                    <option>Infraestructura</option>
+                                    <option>Climatización</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea class="form-control" rows="3" placeholder="Requerimientos adicionales para el técnico"></textarea>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{% url 'tickets:detalle' ticket.numero %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-megaphone me-1"></i> Publicar oferta</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-header bg-white"><strong><i class="bi bi-people me-2"></i>Técnicos elegibles</strong></div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for t in tecnicos_elegibles %}
+                        <div class="list-group-item d-flex align-items-center gap-3">
+                            <div class="avatar">{{ t.nombre|slice:":1" }}{{ t.nombre|slice:"6:7" }}</div>
+                            <div class="flex-grow-1">
+                                <strong>{{ t.nombre }}</strong>
+                                <div class="small text-muted">{{ t.especialidades|join:", " }}</div>
+                            </div>
+                            <span class="badge bg-success pill">Disponible</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="p-3 text-muted small">
+                        <i class="bi bi-info-circle me-1"></i> El algoritmo de técnicos elegibles por especialidad se implementará en una fase posterior.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

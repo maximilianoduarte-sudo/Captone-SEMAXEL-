@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Mi perfil | SEMAXEL{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-1">Mi perfil</h4>
+    <span class="text-muted d-block mb-4">Información del usuario actual (prototipo visual)</span>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="avatar mx-auto mb-3" style="width:90px;height:90px;font-size:2rem">JP</div>
+                    <h5 class="mb-1">Juan Pérez</h5>
+                    <span class="badge bg-primary pill">Encargado</span>
+                    <p class="text-muted small mt-3 mb-0">juan.perez@semaxel.cl</p>
+                    <p class="text-muted small">Sucursal Providencia</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white"><strong>Datos de la cuenta</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" class="form-control" value="Juan" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Apellido</label>
+                            <input type="text" class="form-control" value="Pérez" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Correo</label>
+                            <input type="email" class="form-control" value="juan.perez@semaxel.cl" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Teléfono</label>
+                            <input type="text" class="form-control" value="+56 9 1234 5678" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Rol</label>
+                            <input type="text" class="form-control" value="Encargado" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Sucursal</label>
+                            <input type="text" class="form-control" value="Providencia" disabled>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <a class="btn btn-primary"><i class="bi bi-pencil me-1"></i> Editar perfil</a>
+                        <a class="btn btn-outline-secondary"><i class="bi bi-key me-1"></i> Cambiar contraseña</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

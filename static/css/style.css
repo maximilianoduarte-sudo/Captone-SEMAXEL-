@@ -1,15 +1,390 @@
 /*
 * Sistema de Gestión de Mantenimiento de Infraestructura
-* Estilos propios del proyecto.
-* Puede ampliarse en fases posteriores.
+* Estilos propios del proyecto - SEMAXEL
 */
 
-body {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+:root {
+    --sidebar-width: 250px;
+    --primary: #0d6efd;
+    --sidebar-bg: #1f2937;
+    --sidebar-hover: #374151;
+    --sidebar-text: #cbd5e1;
+    --topbar-bg: #ffffff;
+    --content-bg: #f1f5f9;
 }
 
-main {
+body, html {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+}
+
+.app-body {
+    background-color: var(--content-bg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ===== LAYOUT ===== */
+.app-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-main {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 0;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1040;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+}
+
+.sidebar.show {
+    transform: translateX(0);
+}
+
+.sidebar-brand {
+    padding: 20px 20px 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+}
+
+.sidebar-brand i {
+    color: #4f8ef7;
+}
+
+.sidebar-sub {
+    padding: 4px 20px 16px;
+    font-size: 0.72rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sidebar-nav {
+    flex: 1;
+    padding: 8px;
+    overflow-y: auto;
+}
+
+.side-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    margin-bottom: 4px;
+    color: var(--sidebar-text);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.side-link i {
+    font-size: 1.15rem;
+    width: 22px;
+    text-align: center;
+}
+
+.side-link:hover {
+    background: var(--sidebar-hover);
+    color: #ffffff;
+}
+
+.side-link.active {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.sidebar-footer {
+    padding: 14px 20px;
+    font-size: 0.75rem;
+    color: #6b7280;
+    border-top: 1px solid #374151;
+}
+
+/* Desktop: sidebar always visible */
+@media (min-width: 992px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+    .app-main {
+        margin-left: var(--sidebar-width);
+    }
+    .navbar-toggler-btn {
+        display: none;
+    }
+}
+
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1035;
+}
+
+.sidebar-backdrop.show {
+    display: block;
+}
+
+/* ===== TOPBAR ===== */
+.topbar {
+    background: var(--topbar-bg);
+    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+}
+
+.navbar-toggler-btn {
+    background: none;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1.3rem;
+    line-height: 1;
+    padding: 4px 8px;
+    color: #374151;
+}
+
+.breadcrumb {
+    font-size: 0.9rem;
+}
+
+.topbar-user {
+    background: none;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #1f2937;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.topbar-user:hover {
+    background: #f3f4f6;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+
+.user-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+    text-align: left;
+}
+
+.user-meta small {
+    color: #6b7280;
+}
+
+/* ===== CONTENT ===== */
+.app-content {
+    padding: 24px;
+    flex: 1;
+}
+
+/* ===== CARDS ===== */
+.card {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.stat-card {
+    border: none;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    background: #fff;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+.stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #fff;
+}
+
+.stat-info .value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.stat-info .label {
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.bg-primary-soft { background: #eef4ff; color:#0d6efd; }
+.bg-danger-soft { background: #fee2e2; color:#dc2626; }
+.bg-warning-soft { background: #fef3c7; color:#d97706; }
+.bg-success-soft { background: #d1fae5; color:#059669; }
+.bg-info-soft { background: #e0f2fe; color:#0284c7; }
+.bg-purple-soft { background: #ede9fe; color:#7c3aed; }
+.bg-gray-soft { background: #f3f4f6; color:#4b5563; }
+
+/* ===== BADGES ESTADOS ===== */
+.badge-pill { padding: 0.45em 0.7em; font-weight: 600; font-size: 0.75rem; }
+
+.bg-ABIERTO { background:#e0f2fe; color:#0369a1; }
+.bg-EN_REVISION { background:#fef3c7; color:#b45309; }
+.bg-PUBLICADO { background:#ede9fe; color:#7c3aed; }
+.bg-EN_EJECUCION { background:#e0e7ff; color:#4338ca; }
+.bg-RESUELTO { background:#d1fae5; color:#059669; }
+.bg-CERRADO { background:#e5e7eb; color:#374151; }
+.bg-CANCELADO { background:#fee2e2; color:#b91c1c; }
+.bg-ASIGNADA { background:#e0e7ff; color:#4338ca; }
+
+/* Prioridades */
+.pr-BAJA { background:#e5e7eb; color:#374151; }
+.pr-MEDIA { background:#fef3c7; color:#b45309; }
+.pr-ALTA { background:#fed7aa; color:#c2410c; }
+.pr-CRITICA { background:#fee2e2; color:#dc2626; }
+
+/* Disponibilidad técnicos */
+.disponible { color:#059669; }
+.ocupado { color:#d97706; }
+.no-disponible { color:#6b7280; }
+.inactivo { color:#dc2626; }
+
+/* ===== TABLAS ===== */
+.table thead th {
+    background: #f8fafc;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.isotipo { display:none; }
+
+.btn-action {
+    padding: 3px 7px;
+    font-size: 0.8rem;
+}
+
+/* ===== LOGIN ===== */
+.login-body {
+    background: linear-gradient(135deg, #1f2937 0%, #0f172a 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-card {
+    max-width: 420px;
+    width: 100%;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+.login-header {
+    background: linear-gradient(135deg, #2563eb, #0d6efd);
+    color: #fff;
+    padding: 28px;
+    text-align: center;
+}
+
+.login-header i {
+    font-size: 2.8rem;
+}
+
+.login-header h2 {
+    margin: 12px 0 2px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.login-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.85rem;
+}
+
+/* ===== PROGRESO / HISTORIAL ===== */
+.timeline {
+    position: relative;
+    padding-left: 24px;
+}
+
+.timeline::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: #e5e7eb;
+}
+
+.timeline-item {
+    position: relative;
+    padding: 0 0 16px 12px;
+}
+
+.timeline-item::before {
+    content: "";
+    position: absolute;
+    left: -24px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--primary);
+}
+
+/* ===== Responsive helpers ===== */
+@media (max-width: 575px) {
+    .app-content { padding: 16px; }
+    .stat-info .value { font-size: 1.3rem; }
 }

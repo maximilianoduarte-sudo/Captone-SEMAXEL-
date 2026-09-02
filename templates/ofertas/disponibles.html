@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load demo_extras %}
+
+{% block title %}Ofertas disponibles | SEMAXEL{% endblock %}
+
+{% block active_ofertas %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item active" aria-current="page">Ofertas</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-1">Ofertas disponibles</h4>
+    <span class="text-muted d-block mb-4">Trabajos disponibles para técnicos según su especialidad</span>
+
+    <div class="row g-3">
+        {% for o in ofertas %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <span class="text-muted small">{{ o.ticket }}</span>
+                            <h5 class="mb-0">{{ o.titulo }}</h5>
+                        </div>
+                        <span class="badge pill pr-{{ o.prioridad }}">{{ o.prioridad|prioridad_label }}</span>
+                    </div>
+                    <div class="text-muted small mb-2">
+                        <div><i class="bi bi-building me-1"></i>Sucursal: {{ o.sucursal }}</div>
+                        <div><i class="bi bi-tag me-1"></i>Categoría: {{ o.categoria }}</div>
+                    </div>
+                    <div class="d-flex align-items-center text-muted small mb-3">
+                        <i class="bi bi-clock me-1"></i> Publicado {{ o.publicacion }}
+                    </div>
+                    <a href="{% url 'ofertas:detalle' o.id %}" class="btn btn-outline-primary w-100">
+                        Ver detalle
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card text-center py-5">
+                <i class="bi bi-inbox" style="font-size:3rem;color:#cbd5e1"></i>
+                <h5 class="mt-3">No hay ofertas disponibles</h5>
+                <p class="text-muted">Vuelve más tarde o revisa los tickets publicados.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

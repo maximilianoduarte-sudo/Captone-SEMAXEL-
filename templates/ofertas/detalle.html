@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load demo_extras %}
+
+{% block title %}Oferta {{ oferta.ticket }} | SEMAXEL{% endblock %}
+
+{% block active_ofertas %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'ofertas:disponibles' %}">Ofertas</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ oferta.ticket }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    {% if tomada %}
+    <div class="alert alert-success d-flex align-items-center gap-2">
+        <i class="bi bi-check-circle-fill"></i>
+        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket }} ha sido asignada a tu usuario. Prototipo visual: la transacción real se implementará en una fase posterior.</div>
+    </div>
+    {% endif %}
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-2">
+        <div>
+            <div class="text-muted">Oferta de trabajo</div>
+            <h3 class="mb-0">{{ oferta.ticket }} · {{ oferta.titulo }}</h3>
+            <span class="badge pill bg-{{ oferta.estado }} mt-2">{{ oferta.estado|estado_label }}</span>
+        </div>
+        <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#tomarModal">
+            <i class="bi bi-hand-index-thumb me-2"></i>TOMAR OFERTA
+        </button>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header bg-white"><strong>Información del trabajo</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="text-muted small">Sucursal</div>
+                            <strong>{{ oferta.sucursal }}</strong>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Dirección</div>
+                            <strong>{{ oferta.direccion }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Categoría</div>
+                            <strong>{{ oferta.categoria }}</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Prioridad</div>
+                            <span class="badge pill pr-{{ oferta.prioridad }}">{{ oferta.prioridad|prioridad_label }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-muted small">Publicado</div>
+                            <strong>{{ oferta.publicacion }}</strong>
+                        </div>
+                        <div class="col-12">
+                            <hr>
+                            <div class="text-muted small mb-1">Descripción</div>
+                            <p class="mb-0">{{ oferta.descripcion }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-white"><strong>Vencimiento</strong></div>
+                <div class="card-body d-flex align-items-center gap-3">
+                    <i class="bi bi-hourglass-split text-warning" style="font-size:2rem"></i>
+                    <div>
+                        <div class="text-muted small">Fecha de vencimiento</div>
+                        <strong>{{ oferta.vencimiento }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-white"><strong>¿Por qué tomar esta oferta?</strong></div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0 small">
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-1"></i>Coincide con tu especialidad</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-1"></i>Prioridad considera urgencia de atención</li>
+                        <li class="mb-2"><i class="bi bi-check-circle text-success me-1"></i>Sucursal dentro de tu zona de cobertura</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal tomar oferta -->
+<div class="modal fade" id="tomarModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-hand-index-thumb me-2"></i>Confirmar toma de oferta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas tomar la oferta <strong>{{ oferta.ticket }} - {{ oferta.titulo }}</strong>?</p>
+                <div class="alert alert-warning small mb-0">
+                    <i class="bi bi-info-circle me-1"></i> Esta acción es de demostración. La transacción real se implementará en una fase posterior.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form method="post" action="{% url 'ofertas:tomar' oferta.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Confirmar toma</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
