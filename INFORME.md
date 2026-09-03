@@ -61,6 +61,7 @@ Capstone-SEMAXEL/
 | 20/08/2026 | `instalacion de django` | Inicial | Instalación de Django y configuración base (`sistema_mantenimiento/`). |
 | 27/08/2026 | `FASE 1 estructura base` | Fase 1 | Reestructuración del proyecto: creación de las 8 aplicaciones, settings, plantillas base y configuración MySQL. |
 | 27/08/2026 | `Fase 2.1` | Fase 2.1 | Definición completa de los modelos de datos (935 líneas agregadas). |
+| 02/09/2026 | `prototipado` | Fase 3 | Prototipo visual navegable: templates, urls, views y datos ficticios (2.721 líneas agregadas). |
 
 ---
 
@@ -127,6 +128,50 @@ migraciones correspondientes.
 #### `mantenimiento` y `dashboard`
 - Aplicaciones creadas como base (modelos a definir en fases posteriores).
 
+### 5.4 Fase 3 — Prototipado visual navegable
+Se crea y configura un prototipo funcional de la interfaz con **templates**,
+**urls** y **views**, alimentado por **datos ficticios** (`config/demo_data.py`)
+para visualizar el diseño y la navegación sin consultas reales a la base de
+datos.
+
+#### Rutas y views
+- **config/urls.py**: rutas principales (dashboard, login, perfil, reportes) y
+  `include` de las URLs de cada app (tickets, ofertas, órdenes, sucursales,
+  técnicos, mantenimiento). Se sirven los medios en modo DEBUG.
+- **config/demo_data.py**: conjunto de datos de demostración (sucursales,
+  especialidades, categorías, tickets, historial, evidencias, ofertas, órdenes,
+  técnicos y planes de mantenimiento) con funciones auxiliares de búsqueda.
+- **dashboard/views.py**: dashboard con indicadores (tickets abiertos/críticos/
+  en ejecución/resueltos, ofertas, órdenes y cumplimiento SLA) y pantallas de
+  login, perfil y reportes (datos ficticios, sin autenticación real).
+- **tickets/views.py**: listado con buscador y filtros por estado/prioridad/
+  categoría, detalle con historial y evidencias, formulario de creación y
+  publicación de oferta.
+- **ofertas/views.py**: ofertas disponibles y detalle con opción de tomarlas.
+- **tickets/ordenes_views.py**: listado de órdenes de trabajo con filtros y
+  detalle de cada orden.
+- **sucursales/views.py**: listado, formulario y detalle de sucursales.
+- **tecnicos/views.py**: listado con filtro por estado y detalle.
+- **mantenimiento/views.py**: listado de planes de mantenimiento preventivo.
+
+#### Templates (33 archivos)
+- **base.html**: layout con sidebar navegable, topbar con perfil de usuario,
+  breadcrumbs, mensajes/flash y carga de Bootstrap 5, Bootstrap Icons y Chart.js.
+- **dashboard/**: dashboard.html (indicadores, gráficos de barra, dona y SLA con
+  Chart.js, actividad reciente), login.html, perfil.html y reportes.html.
+- **tickets/**: lista, detalle, crear, publicar_oferta, ordenes_lista y orden_detalle.
+- **ofertas/**: disponibles y detalle.
+- **sucursales/**: lista, detalle y form.
+- **tecnicos/**: lista y detalle.
+- **mantenimiento/**: lista.
+
+#### Extras
+- **dashboard/templatetags/demo_extras.py**: filtros personalizados para etiquetas
+  legibles de estado, prioridad y disponibilidad, y tag para obtener el nombre
+  de un archivo.
+- **static/css/style.css**: ampliado (+383 líneas) con estilos de la aplicación
+  (sidebar, tarjetas de indicadores, badges por color de estado/prioridad, etc.).
+
 ---
 
 ## 6. Estado actual y pendientes
@@ -135,15 +180,18 @@ migraciones correspondientes.
 - Instalación de Django.
 - Estructura base del proyecto y configuración MySQL.
 - Modelos de datos de todas las aplicaciones principales con migraciones.
+- **Prototipo visual navegable** de todas las secciones del sistema con datos
+  de demostración (Fase 3).
 
 ⏳ **Pendiente (próximas fases):**
-- Vistas, URLs y formularios de cada aplicación.
-- CRUD de sucursales, técnicos, especialidades y categorías.
-- Lógica de negocio: creación de tickets, publicación/toma de ofertas.
+- **Conectar las vistas al modelo de datos real** (reemplazar `demo_data` por
+  consultas al ORM y formularios Django).
+- CRUD persistente de sucursales, técnicos, especialidades y categorías.
+- Lógica de negocio real: creación de tickets, publicación/toma de ofertas.
 - Cálculo automático de vencimientos de SLA.
-- Sistema de autenticación y permisos por rol.
-- Dashboard con indicadores y gráficos (Chart.js).
-- Panel de administración avanzado y vistas de usuario.
+- Sistema de autenticación y permisos por rol (actualmente el login es visual).
+- Reportes con datos reales y gráficos dinámicos.
+- Panel de administración avanzado y vistas de usuario definitivas.
 
 ---
 

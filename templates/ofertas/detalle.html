@@ -15,7 +15,7 @@
     {% if tomada %}
     <div class="alert alert-success d-flex align-items-center gap-2">
         <i class="bi bi-check-circle-fill"></i>
-        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket }} ha sido asignada a tu usuario. Prototipo visual: la transacción real se implementará en una fase posterior.</div>
+        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket }} ha sido asignada a tu usuario.</div>
     </div>
     {% endif %}
 
@@ -102,9 +102,6 @@
             </div>
             <div class="modal-body">
                 <p>¿Estás seguro de que deseas tomar la oferta <strong>{{ oferta.ticket }} - {{ oferta.titulo }}</strong>?</p>
-                <div class="alert alert-warning small mb-0">
-                    <i class="bi bi-info-circle me-1"></i> Esta acción es de demostración. La transacción real se implementará en una fase posterior.
-                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
