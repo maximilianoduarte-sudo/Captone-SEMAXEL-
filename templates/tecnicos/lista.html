@@ -30,7 +30,7 @@
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <div class="avatar">{{ t.nombre|slice:":1" }}</div>
                         <div class="flex-grow-1">
-                            <a href="{% url 'tecnicos:detalle' t.nombre %}" class="text-decoration-none"><h5 class="mb-0">{{ t.nombre }}</h5></a>
+                            <a href="{% url 'tecnicos:detalle' t.id %}" class="text-decoration-none"><h5 class="mb-0">{{ t.nombre }}</h5></a>
                             <small class="text-muted">{{ t.especialidades|join:" · " }}</small>
                         </div>
                     </div>
@@ -57,5 +57,6 @@
         </div>
         {% endfor %}
     </div>
+    {% include 'includes/paginacion.html' with page_obj=tecnicos %}
 </div>
 {% endblock %}

@@ -31,7 +31,7 @@
                     <select name="tecnico" class="form-select">
                         <option value="">Todos</option>
                         {% for t in tecnicos %}
-                        <option value="{{ t.nombre }}" {% if tecnico_seleccionado == t.nombre %}selected{% endif %}>{{ t.nombre }}</option>
+                        <option value="{{ t.id }}" {% if tecnico_seleccionado == t.id|stringformat:"s" %}selected{% endif %}>{{ t.nombre }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -55,7 +55,7 @@
                     {% for o in ordenes %}
                     <tr>
                         <td><a href="{% url 'ordenes:detalle' o.id %}"><strong>#{{ o.id|stringformat:"05d" }}</strong></a></td>
-                        <td>{{ o.ticket }}</td>
+                        <td>{{ o.ticket.numero }}</td>
                         <td>{{ o.tecnico }}</td>
                         <td>{{ o.sucursal }}</td>
                         <td><span class="badge pill bg-{{ o.estado }}">{{ o.estado|estado_label }}</span></td>
@@ -72,6 +72,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' with page_obj=ordenes %}
     </div>
 </div>
 {% endblock %}

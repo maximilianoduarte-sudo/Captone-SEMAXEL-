@@ -56,7 +56,7 @@
                         </div>
                         <div class="col-12">
                             <div class="text-muted small">Creador</div>
-                            <strong>{{ ticket.creador }}</strong> · <span class="text-muted">{{ ticket.fecha }}</span>
+                            <strong>{{ ticket.creador.get_full_name|default:ticket.creador.username }}</strong> · <span class="text-muted">{{ ticket.fecha }}</span>
                         </div>
                         <div class="col-12">
                             <hr>
@@ -131,22 +131,17 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <label class="form-label">Nuevo estado</label>
-                <select class="form-select">
-                    <option>Abierto</option>
-                    <option>En revisión</option>
-                    <option>Publicado</option>
-                    <option>En ejecución</option>
-                    <option>Resuelto</option>
-                    <option>Cerrado</option>
-                    <option>Cancelado</option>
-                </select>
-                <label class="form-label mt-3">Comentario</label>
-                <textarea class="form-control" rows="3" placeholder="Motivo del cambio (opcional)"></textarea>
+                <form method="post" action="{% url 'tickets:cambiar_estado' ticket.numero %}" id="estadoForm">
+                    {% csrf_token %}
+                    <label class="form-label" for="id_estado">Nuevo estado</label>
+                    {{ form_estado.estado }}
+                    <label class="form-label mt-3" for="id_comentario">Comentario</label>
+                    {{ form_estado.comentario }}
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary">Confirmar cambio</button>
+                <button type="submit" form="estadoForm" class="btn btn-primary">Confirmar cambio</button>
             </div>
         </div>
     </div>

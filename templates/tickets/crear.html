@@ -18,48 +18,43 @@
             <div class="card">
                 <div class="card-header bg-white"><strong><i class="bi bi-ticket-perforated me-2"></i>Registrar ticket</strong></div>
                 <div class="card-body">
-                    <form method="post">
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Sucursal <span class="text-danger">*</span></label>
-                                <select class="form-select" name="sucursal">
-                                    {% for s in sucursales %}
-                                    <option value="{{ s.id }}">{{ s.nombre }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label" for="{{ form.sucursal.id_for_label }}">Sucursal <span class="text-danger">*</span></label>
+                                {{ form.sucursal }}
+                                {{ form.sucursal.errors }}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Categoría <span class="text-danger">*</span></label>
-                                <select class="form-select" name="categoria">
-                                    {% for c in categorias %}
-                                    <option value="{{ c.id }}">{{ c.nombre }}</option>
-                                    {% endfor %}
-                                </select>
+                                <label class="form-label" for="{{ form.categoria.id_for_label }}">Categoría <span class="text-danger">*</span></label>
+                                {{ form.categoria }}
+                                {{ form.categoria.errors }}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Prioridad <span class="text-danger">*</span></label>
-                                <select class="form-select" name="prioridad">
-                                    <option value="BAJA">Baja</option>
-                                    <option value="MEDIA" selected>Media</option>
-                                    <option value="ALTA">Alta</option>
-                                    <option value="CRITICA">Crítica</option>
-                                </select>
+                                <label class="form-label" for="{{ form.prioridad.id_for_label }}">Prioridad <span class="text-danger">*</span></label>
+                                {{ form.prioridad }}
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Tipo</label>
-                                <select class="form-select" name="tipo">
-                                    <option value="INCIDENCIA" selected>Incidencia</option>
-                                    <option value="PREVENTIVO">Preventivo</option>
-                                </select>
+                                <label class="form-label" for="{{ form.tipo.id_for_label }}">Tipo</label>
+                                {{ form.tipo }}
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Título <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="titulo" placeholder="Fuga de agua en cocina" required>
+                                <label class="form-label" for="{{ form.titulo.id_for_label }}">Título <span class="text-danger">*</span></label>
+                                {{ form.titulo }}
+                                {{ form.titulo.errors }}
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Descripción <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="descripcion" rows="4" placeholder="Describe la falla o incidencia detectada..." required></textarea>
+                                <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción <span class="text-danger">*</span></label>
+                                {{ form.descripcion }}
+                                {{ form.descripcion.errors }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="{{ form.informacion_adicional.id_for_label }}">Información adicional</label>
+                                {{ form.informacion_adicional }}
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Evidencia / Fotografía</label>

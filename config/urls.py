@@ -17,6 +17,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', dashboard_views.dashboard, name='dashboard'),
     path('login/', dashboard_views.login, name='login'),
+    path('logout/', dashboard_views.logout, name='logout'),
     path('perfil/', dashboard_views.perfil, name='perfil'),
     path('reportes/', dashboard_views.reportes, name='reportes'),
 

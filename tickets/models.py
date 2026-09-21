@@ -117,6 +117,13 @@ class Ticket(models.Model):
     def __str__(self):
         return f"{self.numero} - {self.titulo}"
 
+    @property
+    def fecha(self):
+        """Fecha de creación formateada para las plantillas."""
+        if self.fecha_creacion:
+            return self.fecha_creacion.strftime("%d/%m/%Y %H:%M")
+        return ""
+
 
 class EvidenciaTicket(models.Model):
     """
@@ -214,6 +221,34 @@ class OrdenTrabajo(models.Model):
 
     def __str__(self):
         return f"Orden {self.pk} - Ticket {self.ticket.numero}"
+
+    @property
+    def sucursal(self):
+        """Nombre de la sucursal del ticket asociado."""
+        return self.ticket.sucursal.nombre
+
+    @property
+    def asignacion(self):
+        """Fecha de toma/asignación formateada para las plantillas."""
+        fecha = self.fecha_creacion
+        if self.oferta_id and self.oferta.fecha_tomada:
+            fecha = self.oferta.fecha_tomada
+        return fecha.strftime("%d/%m/%Y %H:%M") if fecha else "—"
+
+    @property
+    def inicio(self):
+        """Fecha de inicio formateada (o '—' si aún no inicia)."""
+        return self.fecha_inicio.strftime("%d/%m/%Y %H:%M") if self.fecha_inicio else "—"
+
+    @property
+    def fin(self):
+        """Fecha de finalización formateada (o '—' si aún no termina)."""
+        return self.fecha_fin.strftime("%d/%m/%Y %H:%M") if self.fecha_fin else "—"
+
+    @property
+    def descripcion(self):
+        """Descripción del trabajo (reutiliza la del ticket)."""
+        return self.ticket.descripcion
 
 
 class Calificacion(models.Model):

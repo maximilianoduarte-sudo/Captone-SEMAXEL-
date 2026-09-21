@@ -71,3 +71,39 @@ class OfertaTicket(models.Model):
 
     def __str__(self):
         return f"Oferta {self.ticket.numero if hasattr(self.ticket, 'numero') else self.ticket_id} - {self.get_estado_display()}"
+
+    @property
+    def titulo(self):
+        return self.ticket.titulo
+
+    @property
+    def sucursal(self):
+        return self.ticket.sucursal.nombre
+
+    @property
+    def direccion(self):
+        return self.ticket.sucursal.direccion
+
+    @property
+    def categoria(self):
+        return self.ticket.categoria.nombre
+
+    @property
+    def prioridad(self):
+        return self.ticket.prioridad
+
+    @property
+    def descripcion(self):
+        return self.ticket.descripcion
+
+    @property
+    def publicacion(self):
+        from django.utils import timesince
+
+        return f"hace {timesince.timesince(self.fecha_publicacion)}"
+
+    @property
+    def vencimiento(self):
+        if self.fecha_vencimiento:
+            return self.fecha_vencimiento.strftime("%d/%m/%Y %H:%M")
+        return "Sin fecha"

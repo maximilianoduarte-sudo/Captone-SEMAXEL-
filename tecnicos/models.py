@@ -75,4 +75,34 @@ class Tecnico(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.usuario.get_full_name() or self.usuario.username} - {self.get_estado_display()}"
+        return self.nombre
+
+    @property
+    def nombre(self):
+        """Nombre completo del usuario asociado."""
+        return self.usuario.get_full_name() or self.usuario.username
+
+    @property
+    def calificacion(self):
+        """Promedio de calificaciones recibidas (o None si no tiene)."""
+        promedio = self.calificaciones.aggregate(models.Avg("puntuacion"))["puntuacion__avg"]
+        return round(promedio, 2) if promedio else None
+
+    @property
+    def completados(self):
+        """Cantidad de órdenes de trabajo resueltas o cerradas."""
+        from tickets.models import OrdenTrabajo
+
+        terminadas = (OrdenTrabajo.Estado.RESUELTA, OrdenTrabajo.Estado.CERRADA)
+        return self.ordenes_trabajo.filter(estado__in=terminadas).count()
+
+    @property
+    def sla(self):
+        """Porcentaje de trabajos terminados (sin cancelar) sobre el total."""
+        total = self.ordenes_trabajo.exclude(estado="CANCELADA").count()
+        if total == 0:
+            return 100
+        terminadas = self.ordenes_trabajo.filter(
+            estado__in=["RESUELTA", "CERRADA"]
+        ).count()
+        return round(terminadas / total * 100)

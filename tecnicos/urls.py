@@ -6,5 +6,7 @@ app_name = 'tecnicos'
 
 urlpatterns = [
     path('', views.lista, name='lista'),
-    path('<str:nombre>/', views.detalle, name='detalle'),
+    path('nuevo/', views.crear, name='crear'),
+    path('<int:pk>/editar/', views.editar, name='editar'),
+    path('<int:pk>/', views.detalle, name='detalle'),
 ]

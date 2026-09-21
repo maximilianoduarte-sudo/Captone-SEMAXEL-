@@ -47,3 +47,11 @@ class Sucursal(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    @property
+    def encargado(self):
+        """Primer encargado (para mostrar en listados y detalle)."""
+        encargado = self.encargados.first()
+        if encargado:
+            return encargado.get_full_name() or encargado.username
+        return "Sin encargado"

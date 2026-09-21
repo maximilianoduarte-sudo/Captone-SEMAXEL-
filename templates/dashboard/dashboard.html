@@ -137,8 +137,7 @@
                                 <td><a href="{% url 'tickets:detalle' t.numero %}"><strong>{{ t.numero }}</strong></a></td>
                                 <td>{{ t.titulo }}</td>
                                 <td>{{ t.sucursal }}</td>
-                                <td><span class="badge pill pr-{{ t.prioridad }}">{{ t.prioridad }}</span></td>
-                                <td>{% if t.estado %}<span class="badge pill bg-{{ t.estado }}">{{ t.estado|estado_label }}</span>{% else %}—{% endif %}</td>
+                                <td><span class="badge pill pr-{{ t.prioridad }}">{{ t.prioridad|prioridad_label }}</span></td>
                                 <td class="text-muted">{{ t.fecha }}</td>
                             </tr>
                             {% empty %}
@@ -154,15 +153,24 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ estado_labels|json_script:"estado-labels" }}
+{{ estado_values|json_script:"estado-values" }}
+{{ prioridad_labels|json_script:"prioridad-labels" }}
+{{ prioridad_values|json_script:"prioridad-values" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const estadoLabels = JSON.parse(document.getElementById('estado-labels').textContent);
+    const estadoValues = JSON.parse(document.getElementById('estado-values').textContent);
+    const prioridadLabels = JSON.parse(document.getElementById('prioridad-labels').textContent);
+    const prioridadValues = JSON.parse(document.getElementById('prioridad-values').textContent);
+
     new Chart(document.getElementById('chartEstado'), {
         type: 'bar',
         data: {
-            labels: ['Abiertos','En revisión','Publicados','En ejecución','Resueltos','Cerrados'],
+            labels: estadoLabels,
             datasets: [{
                 label: 'Tickets',
-                data: [24, 8, 5, 4, 12, 15],
+                data: estadoValues,
                 backgroundColor: ['#0d6efd','#f59e0b','#8b5cf6','#4f46e5','#10b981','#6b7280']
             }]
         },
@@ -172,9 +180,9 @@ document.addEventListener('DOMContentLoaded', function () {
     new Chart(document.getElementById('chartPrioridad'), {
         type: 'doughnut',
         data: {
-            labels: ['Baja','Media','Alta','Crítica'],
+            labels: prioridadLabels,
             datasets: [{
-                data: [18, 22, 12, 2],
+                data: prioridadValues,
                 backgroundColor: ['#6b7280','#f59e0b','#f97316','#dc2626']
             }]
         },

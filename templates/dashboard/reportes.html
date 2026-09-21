@@ -8,34 +8,46 @@
 {% block content %}
 <div class="container-fluid px-0">
     <h4 class="mb-1">Reportes</h4>
-    <span class="text-muted d-block mb-4">Indicadores y reportes del sistema (prototipo visual)</span>
+    <span class="text-muted d-block mb-4">Indicadores calculados sobre los datos del sistema</span>
 
     <div class="row g-3 mb-4">
         <div class="col-6 col-lg-3">
             <div class="card text-center p-3">
-                <div class="fs-3 fw-bold">92%</div>
+                <div class="fs-3 fw-bold">{{ cumplimiento_sla }}%</div>
                 <small class="text-muted">Cumplimiento SLA general</small>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="card text-center p-3">
-                <div class="fs-3 fw-bold">58</div>
-                <small class="text-muted">Tickets totales septiembre</small>
+                <div class="fs-3 fw-bold">{{ tickets_totales }}</div>
+                <small class="text-muted">Tickets totales</small>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="card text-center p-3">
-                <div class="fs-3 fw-bold">4.7 ★</div>
+                <div class="fs-3 fw-bold">{{ calificacion_promedio }} <i class="bi bi-star-fill"></i></div>
                 <small class="text-muted">Calificación promedio técnicos</small>
             </div>
         </div>
         <div class="col-6 col-lg-3">
             <div class="card text-center p-3">
-                <div class="fs-3 fw-bold">1.2 días</div>
-                <small class="text-muted">Tiempo promedio de resolución</small>
+                <div class="fs-3 fw-bold">{{ tecnicos_activos }}</div>
+                <small class="text-muted">Técnicos activos</small>
             </div>
         </div>
     </div>
 
+    <div class="card">
+        <div class="card-header bg-white">
+            <strong><i class="bi bi-lightbulb me-2"></i>Nota</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-0 text-muted">
+                En esta fase se muestran los indicadores globales. La generación de
+                reportes detallados (por sucursal, por técnico, por categoría y con
+                gráficos dinámicos) se aborda en la Fase 7 del roadmap.
+            </p>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -1,47 +1,40 @@
-from django.shortcuts import render
+from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404, render
 
-from config import demo_data
+from tecnicos.models import Tecnico
+
+from .models import OrdenTrabajo
 
 
 def lista(request):
-    """Listado de órdenes de trabajo (prototipo visual)."""
+    """Listado paginado de órdenes de trabajo con filtros."""
     estado = request.GET.get("estado", "")
-    tecnico = request.GET.get("tecnico", "")
+    tecnico_id = request.GET.get("tecnico", "")
 
-    ordenes = demo_data.ORDENES
+    qs = OrdenTrabajo.objects.select_related("ticket__sucursal", "tecnico__usuario", "oferta").all()
     if estado:
-        ordenes = [o for o in ordenes if o["estado"] == estado]
-    if tecnico:
-        ordenes = [o for o in ordenes if o["tecnico"] == tecnico]
+        qs = qs.filter(estado=estado)
+    if tecnico_id:
+        qs = qs.filter(tecnico_id=tecnico_id)
 
-    estados = {
-        "ASIGNADA": "Asignada",
-        "EN_EJECUCION": "En ejecución",
-        "RESUELTA": "Resuelta",
-        "CERRADA": "Cerrada",
-        "CANCELADA": "Cancelada",
-    }
+    paginator = Paginator(qs, 10)
+    ordenes = paginator.get_page(request.GET.get("page"))
+
     context = {
         "ordenes": ordenes,
         "estado_seleccionado": estado,
-        "tecnico_seleccionado": tecnico,
-        "estados": estados,
-        "tecnicos": demo_data.TECNICOS,
+        "tecnico_seleccionado": tecnico_id,
+        "estados": dict(OrdenTrabajo.Estado.choices),
+        "tecnicos": Tecnico.objects.select_related("usuario").all(),
     }
     return render(request, "tickets/ordenes_lista.html", context)
 
 
 def detalle(request, oid):
-    """Detalle de una orden de trabajo (prototipo visual)."""
-    orden = demo_data.get_orden(oid)
-    if orden is None:
-        orden = demo_data.ORDENES[0]
-    estados = {
-        "ASIGNADA": "Asignada",
-        "EN_EJECUCION": "En ejecución",
-        "RESUELTA": "Resuelta",
-        "CERRADA": "Cerrada",
-        "CANCELADA": "Cancelada",
-    }
-    context = {"orden": orden, "estados": estados}
+    """Detalle de una orden de trabajo."""
+    orden = get_object_or_404(
+        OrdenTrabajo.objects.select_related("ticket__sucursal", "tecnico__usuario", "oferta"),
+        pk=oid,
+    )
+    context = {"orden": orden, "estados": dict(OrdenTrabajo.Estado.choices)}
     return render(request, "tickets/orden_detalle.html", context)

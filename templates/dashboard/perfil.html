@@ -5,17 +5,18 @@
 {% block content %}
 <div class="container-fluid px-0">
     <h4 class="mb-1">Mi perfil</h4>
-    <span class="text-muted d-block mb-4">Información del usuario actual (prototipo visual)</span>
+    <span class="text-muted d-block mb-4">Información del usuario actual</span>
 
     <div class="row g-3">
         <div class="col-lg-4">
             <div class="card text-center">
                 <div class="card-body">
-                    <div class="avatar mx-auto mb-3" style="width:90px;height:90px;font-size:2rem">JP</div>
-                    <h5 class="mb-1">Juan Pérez</h5>
-                    <span class="badge bg-primary pill">Encargado</span>
-                    <p class="text-muted small mt-3 mb-0">juan.perez@semaxel.cl</p>
-                    <p class="text-muted small">Sucursal Providencia</p>
+                    <div class="avatar mx-auto mb-3" style="width:90px;height:90px;font-size:2rem">
+                        {{ user.get_full_name|default:user.username|slice:":1"|default:"S" }}
+                    </div>
+                    <h5 class="mb-1">{{ user.get_full_name|default:user.username }}</h5>
+                    <span class="badge bg-primary pill">{% if user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}</span>
+                    <p class="text-muted small mt-3 mb-0">{{ user.email }}</p>
                 </div>
             </div>
         </div>
@@ -26,32 +27,28 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nombre</label>
-                            <input type="text" class="form-control" value="Juan" disabled>
+                            <input type="text" class="form-control" value="{{ user.first_name }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Apellido</label>
-                            <input type="text" class="form-control" value="Pérez" disabled>
+                            <input type="text" class="form-control" value="{{ user.last_name }}" disabled>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Usuario</label>
+                            <input type="text" class="form-control" value="{{ user.username }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Correo</label>
-                            <input type="email" class="form-control" value="juan.perez@semaxel.cl" disabled>
+                            <input type="email" class="form-control" value="{{ user.email|default:'—' }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Teléfono</label>
-                            <input type="text" class="form-control" value="+56 9 1234 5678" disabled>
+                            <input type="text" class="form-control" value="{{ user.perfil.telefono|default:'—' }}" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Rol</label>
-                            <input type="text" class="form-control" value="Encargado" disabled>
+                            <input type="text" class="form-control" value="{% if user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}" disabled>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Sucursal</label>
-                            <input type="text" class="form-control" value="Providencia" disabled>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2 mt-4">
-                        <a class="btn btn-primary"><i class="bi bi-pencil me-1"></i> Editar perfil</a>
-                        <a class="btn btn-outline-secondary"><i class="bi bi-key me-1"></i> Cambiar contraseña</a>
                     </div>
                 </div>
             </div>

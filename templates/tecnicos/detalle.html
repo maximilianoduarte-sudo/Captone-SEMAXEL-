@@ -20,7 +20,7 @@
                 <small class="text-muted">{{ tecnico.especialidades|join:" · " }}</small>
             </div>
         </div>
-        <button class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i> Editar</button>
+        <a href="{% url 'tecnicos:editar' tecnico.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i> Editar</a>
     </div>
 
     <div class="row g-3">
@@ -59,9 +59,16 @@
                     <table class="table table-hover mb-0">
                         <thead><tr><th>Ticket</th><th>Sucursal</th><th>Estado</th><th>Fecha</th></tr></thead>
                         <tbody>
-                            <tr><td>TK-00004</td><td>Providencia</td><td><span class="badge pill bg-EN_EJECUCION">En ejecución</span></td><td class="small">02/09/2026</td></tr>
-                            <tr><td>TK-00005</td><td>Santiago Centro</td><td><span class="badge pill bg-RESUELTO">Resuelto</span></td><td class="small">01/09/2026</td></tr>
-                            <tr><td>TK-00002</td><td>Santiago Centro</td><td><span class="badge pill bg-CERRADO">Cerrado</span></td><td class="small">30/08/2026</td></tr>
+                            {% for o in ordenes %}
+                            <tr>
+                                <td><a href="{% url 'ordenes:detalle' o.id %}">{{ o.ticket.numero }}</a></td>
+                                <td>{{ o.sucursal }}</td>
+                                <td><span class="badge pill bg-{{ o.estado }}">{{ o.estado|estado_label }}</span></td>
+                                <td class="small">{{ o.fecha_creacion|date:"d/m/Y" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">Sin órdenes registradas.</td></tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>

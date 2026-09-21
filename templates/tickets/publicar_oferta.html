@@ -56,21 +56,13 @@
                         {% csrf_token %}
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Fecha de vencimiento</label>
-                                <input type="datetime-local" class="form-control" name="vencimiento">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Especialidad requerida</label>
-                                <select class="form-select" name="especialidad">
-                                    <option>Electricidad</option>
-                                    <option>Gasfitería</option>
-                                    <option>Infraestructura</option>
-                                    <option>Climatización</option>
-                                </select>
+                                <label class="form-label" for="{{ form.fecha_vencimiento.id_for_label }}">Fecha de vencimiento</label>
+                                {{ form.fecha_vencimiento }}
+                                {{ form.fecha_vencimiento.errors }}
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Observaciones</label>
-                                <textarea class="form-control" rows="3" placeholder="Requerimientos adicionales para el técnico"></textarea>
+                                <label class="form-label" for="{{ form.observaciones.id_for_label }}">Observaciones</label>
+                                {{ form.observaciones }}
                             </div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end mt-4">
@@ -89,13 +81,15 @@
                     <div class="list-group list-group-flush">
                         {% for t in tecnicos_elegibles %}
                         <div class="list-group-item d-flex align-items-center gap-3">
-                            <div class="avatar">{{ t.nombre|slice:":1" }}{{ t.nombre|slice:"6:7" }}</div>
+                            <div class="avatar">{{ t.nombre|slice:":1" }}</div>
                             <div class="flex-grow-1">
                                 <strong>{{ t.nombre }}</strong>
-                                <div class="small text-muted">{{ t.especialidades|join:", " }}</div>
+                                <div class="small text-muted">{{ t.especialidades.all|join:", " }}</div>
                             </div>
                             <span class="badge bg-success pill">Disponible</span>
                         </div>
+                        {% empty %}
+                        <div class="list-group-item text-muted">Sin técnicos disponibles.</div>
                         {% endfor %}
                     </div>
                 </div>

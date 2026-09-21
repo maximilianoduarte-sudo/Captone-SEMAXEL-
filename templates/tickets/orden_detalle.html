@@ -16,7 +16,7 @@
         <div>
             <div class="text-muted">Orden de trabajo</div>
             <h3 class="mb-0">#{{ orden.id|stringformat:"05d" }}</h3>
-            <h5 class="text-muted mt-1">Ticket: {{ orden.ticket }} · {{ orden.sucursal }}</h5>
+            <h5 class="text-muted mt-1">Ticket: {{ orden.ticket.numero }} · {{ orden.sucursal }}</h5>
             <span class="badge pill bg-{{ orden.estado }} mt-2">{{ orden.estado|estado_label }}</span>
         </div>
         <div class="d-flex gap-2 flex-wrap">

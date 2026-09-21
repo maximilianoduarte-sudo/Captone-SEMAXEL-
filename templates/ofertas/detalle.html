@@ -15,14 +15,14 @@
     {% if tomada %}
     <div class="alert alert-success d-flex align-items-center gap-2">
         <i class="bi bi-check-circle-fill"></i>
-        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket }} ha sido asignada a tu usuario.</div>
+        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket.numero }} ha sido asignada a tu usuario.</div>
     </div>
     {% endif %}
 
     <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-2">
         <div>
             <div class="text-muted">Oferta de trabajo</div>
-            <h3 class="mb-0">{{ oferta.ticket }} · {{ oferta.titulo }}</h3>
+            <h3 class="mb-0">{{ oferta.ticket.numero }} · {{ oferta.titulo }}</h3>
             <span class="badge pill bg-{{ oferta.estado }} mt-2">{{ oferta.estado|estado_label }}</span>
         </div>
         <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#tomarModal">
@@ -101,7 +101,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>¿Estás seguro de que deseas tomar la oferta <strong>{{ oferta.ticket }} - {{ oferta.titulo }}</strong>?</p>
+                <p>¿Estás seguro de que deseas tomar la oferta <strong>{{ oferta.ticket.numero }} - {{ oferta.titulo }}</strong>?</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

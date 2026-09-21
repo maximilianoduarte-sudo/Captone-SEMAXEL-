@@ -1,22 +1,56 @@
-from django.shortcuts import render
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404, redirect, render
 
-from config import demo_data
+from tickets.models import OrdenTrabajo
+
+from .forms import TecnicoForm
+from .models import Tecnico
 
 
 def lista(request):
-    """Listado de técnicos (prototipo visual)."""
+    """Listado paginado de técnicos con filtro por estado."""
     estado = request.GET.get("estado", "")
-    tecnicos = demo_data.TECNICOS
+    qs = Tecnico.objects.select_related("usuario").prefetch_related("especialidades").all()
     if estado:
-        tecnicos = [t for t in tecnicos if t["estado"] == estado]
+        qs = qs.filter(estado=estado)
+
+    paginator = Paginator(qs, 12)
+    tecnicos = paginator.get_page(request.GET.get("page"))
+
     context = {"tecnicos": tecnicos, "estado_seleccionado": estado}
     return render(request, "tecnicos/lista.html", context)
 
 
-def detalle(request, nombre):
-    """Detalle visual de un técnico (prototipo)."""
-    tecnico = demo_data.get_tecnico(nombre)
-    if tecnico is None:
-        tecnico = demo_data.TECNICOS[0]
-    context = {"tecnico": tecnico}
+def detalle(request, pk):
+    """Detalle de un técnico con sus órdenes de trabajo reales."""
+    tecnico = get_object_or_404(
+        Tecnico.objects.select_related("usuario").prefetch_related("especialidades"),
+        pk=pk,
+    )
+    ordenes = tecnico.ordenes_trabajo.select_related("ticket__sucursal").order_by("-fecha_creacion")[:5]
+    context = {"tecnico": tecnico, "ordenes": ordenes}
     return render(request, "tecnicos/detalle.html", context)
+
+
+def crear(request):
+    """Formulario de nuevo técnico (persistente)."""
+    form = TecnicoForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Técnico registrado correctamente.")
+        return redirect("tecnicos:lista")
+    context = {"form": form, "titulo": "Nuevo técnico"}
+    return render(request, "tecnicos/form.html", context)
+
+
+def editar(request, pk):
+    """Formulario de edición de técnico (persistente)."""
+    tecnico = get_object_or_404(Tecnico, pk=pk)
+    form = TecnicoForm(request.POST or None, instance=tecnico)
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Técnico actualizado correctamente.")
+        return redirect("tecnicos:detalle", pk=tecnico.pk)
+    context = {"form": form, "titulo": "Editar técnico", "tecnico": tecnico}
+    return render(request, "tecnicos/form.html", context)

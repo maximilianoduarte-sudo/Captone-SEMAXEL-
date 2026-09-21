@@ -44,13 +44,14 @@
                         </td>
                         <td class="text-end">
                             <a href="{% url 'sucursales:detalle' s.id %}" class="btn btn-sm btn-outline-secondary btn-action"><i class="bi bi-eye"></i></a>
-                            <a href="#" class="btn btn-sm btn-outline-primary btn-action"><i class="bi bi-pencil"></i></a>
+                            <a href="{% url 'sucursales:editar' s.id %}" class="btn btn-sm btn-outline-primary btn-action"><i class="bi bi-pencil"></i></a>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' with page_obj=sucursales %}
     </div>
 </div>
 {% endblock %}
