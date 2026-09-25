@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% load demo_extras %}
 
 {% block title %}{{ ticket.numero }} | SEMAXEL{% endblock %}
@@ -22,16 +22,18 @@
             <a href="{% url 'tickets:publicar_oferta' ticket.numero %}" class="btn btn-primary">
                 <i class="bi bi-briefcase me-1"></i> Publicar oferta
             </a>
+            {% if form_estado.fields.estado.choices %}
             <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#estadoModal">
                 <i class="bi bi-arrow-repeat me-1"></i> Cambiar estado
             </button>
+            {% endif %}
         </div>
     </div>
 
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card mb-3">
-                <div class="card-header bg-white"><strong>Información del ticket</strong></div>
+                <div class="card-header bg-white"><strong>InformaciÃ³n del ticket</strong></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -39,7 +41,7 @@
                             <strong>{{ ticket.sucursal }}</strong>
                         </div>
                         <div class="col-md-6">
-                            <div class="text-muted small">Categoría</div>
+                            <div class="text-muted small">CategorÃ­a</div>
                             <strong>{{ ticket.categoria }}</strong>
                         </div>
                         <div class="col-md-4">
@@ -56,11 +58,11 @@
                         </div>
                         <div class="col-12">
                             <div class="text-muted small">Creador</div>
-                            <strong>{{ ticket.creador.get_full_name|default:ticket.creador.username }}</strong> · <span class="text-muted">{{ ticket.fecha }}</span>
+                            <strong>{{ ticket.creador.get_full_name|default:ticket.creador.username }}</strong> Â· <span class="text-muted">{{ ticket.fecha }}</span>
                         </div>
                         <div class="col-12">
                             <hr>
-                            <div class="text-muted small mb-1">Descripción</div>
+                            <div class="text-muted small mb-1">DescripciÃ³n</div>
                             <p class="mb-0">{{ ticket.descripcion }}</p>
                         </div>
                     </div>
@@ -114,7 +116,7 @@
                         <i class="bi bi-briefcase me-1"></i> Publicar oferta
                     </a>
                     <a href="{% url 'ordenes:lista' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-list-check me-1"></i> Ver órdenes de trabajo
+                        <i class="bi bi-list-check me-1"></i> Ver Ã³rdenes de trabajo
                     </a>
                 </div>
             </div>
@@ -123,6 +125,7 @@
 </div>
 
 <!-- Modal cambiar estado -->
+{% if form_estado.fields.estado.choices %}
 <div class="modal fade" id="estadoModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -146,4 +149,5 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

@@ -25,9 +25,11 @@
             <h3 class="mb-0">{{ oferta.ticket.numero }} · {{ oferta.titulo }}</h3>
             <span class="badge pill bg-{{ oferta.estado }} mt-2">{{ oferta.estado|estado_label }}</span>
         </div>
+        {% if rol == "TECNICO" or es_superuser %}
         <button class="btn btn-success btn-lg" data-bs-toggle="modal" data-bs-target="#tomarModal">
             <i class="bi bi-hand-index-thumb me-2"></i>TOMAR OFERTA
         </button>
+        {% endif %}
     </div>
 
     <div class="row g-3">
@@ -93,6 +95,7 @@
 </div>
 
 <!-- Modal tomar oferta -->
+{% if rol == "TECNICO" or es_superuser %}
 <div class="modal fade" id="tomarModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -113,4 +116,5 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

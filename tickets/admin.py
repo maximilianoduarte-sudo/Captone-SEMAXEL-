@@ -12,10 +12,15 @@ class CategoriaAdmin(admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ("numero", "titulo", "sucursal", "prioridad", "estado", "fecha_creacion")
-    list_filter = ("estado", "prioridad", "tipo", "sucursal")
+    list_display = ("numero", "titulo", "empresa", "sucursal", "prioridad", "estado", "fecha_creacion")
+    list_filter = ("estado", "prioridad", "tipo", "sucursal__empresa")
     search_fields = ("numero", "titulo", "sucursal__nombre")
     ordering = ("-fecha_creacion",)
+    list_select_related = ("sucursal__empresa", "categoria", "creador")
+
+    @admin.display(description="Empresa", ordering="sucursal__empresa__codigo")
+    def empresa(self, obj):
+        return obj.sucursal.empresa.codigo
 
 
 @admin.register(EvidenciaTicket)
@@ -26,9 +31,14 @@ class EvidenciaTicketAdmin(admin.ModelAdmin):
 
 @admin.register(OrdenTrabajo)
 class OrdenTrabajoAdmin(admin.ModelAdmin):
-    list_display = ("id", "ticket", "tecnico", "estado", "fecha_creacion")
-    list_filter = ("estado",)
+    list_display = ("id", "ticket", "empresa", "sucursal", "tecnico", "estado", "fecha_creacion")
+    list_filter = ("estado", "ticket__sucursal__empresa")
     search_fields = ("ticket__numero", "tecnico__usuario__username")
+    list_select_related = ("ticket__sucursal__empresa", "tecnico__usuario")
+
+    @admin.display(description="Empresa", ordering="ticket__sucursal__empresa__codigo")
+    def empresa(self, obj):
+        return obj.ticket.sucursal.empresa.codigo
 
 
 @admin.register(Calificacion)

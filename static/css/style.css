@@ -272,9 +272,16 @@ body, html {
 .bg-PUBLICADO { background:#ede9fe; color:#7c3aed; }
 .bg-EN_EJECUCION { background:#e0e7ff; color:#4338ca; }
 .bg-RESUELTO { background:#d1fae5; color:#059669; }
+.bg-RESUELTA { background:#d1fae5; color:#059669; }
 .bg-CERRADO { background:#e5e7eb; color:#374151; }
+.bg-CERRADA { background:#e5e7eb; color:#374151; }
 .bg-CANCELADO { background:#fee2e2; color:#b91c1c; }
+.bg-CANCELADA { background:#fee2e2; color:#b91c1c; }
 .bg-ASIGNADA { background:#e0e7ff; color:#4338ca; }
+.bg-DISPONIBLE { background:#d1fae5; color:#059669; }
+.bg-TOMADA { background:#e0e7ff; color:#4338ca; }
+.bg-COMPLETADA { background:#d1fae5; color:#059669; }
+.bg-EXPIRADA { background:#f3f4f6; color:#6b7280; }
 
 /* Prioridades */
 .pr-BAJA { background:#e5e7eb; color:#374151; }
@@ -320,6 +327,15 @@ body, html {
 
 .login-card {
     max-width: 420px;
+    width: 100%;
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    overflow: hidden;
+}
+
+.register-card {
+    max-width: 780px;
     width: 100%;
     border-radius: 16px;
     border: none;

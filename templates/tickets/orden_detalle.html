@@ -19,10 +19,9 @@
             <h5 class="text-muted mt-1">Ticket: {{ orden.ticket.numero }} · {{ orden.sucursal }}</h5>
             <span class="badge pill bg-{{ orden.estado }} mt-2">{{ orden.estado|estado_label }}</span>
         </div>
-        <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary"><i class="bi bi-play-circle me-1"></i> Iniciar trabajo</button>
-            <button class="btn btn-success"><i class="bi bi-check2-circle me-1"></i> Marcar como resuelto</button>
-            <button class="btn btn-outline-secondary"><i class="bi bi-x-circle me-1"></i> Cerrar orden</button>
+        <div class="text-end">
+            <div class="text-muted small">Técnico</div>
+            <strong>{{ orden.tecnico }}</strong>
         </div>
     </div>
 
@@ -32,14 +31,6 @@
                 <div class="card-header bg-white"><strong>Información de la orden</strong></div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="text-muted small">Técnico</div>
-                            <strong>{{ orden.tecnico }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="text-muted small">Sucursal</div>
-                            <strong>{{ orden.sucursal }}</strong>
-                        </div>
                         <div class="col-md-4">
                             <div class="text-muted small">Fecha de asignación</div>
                             <strong>{{ orden.asignacion }}</strong>
@@ -57,9 +48,37 @@
                             <div class="text-muted small mb-1">Descripción del trabajo</div>
                             <p class="mb-0">{{ orden.descripcion }}</p>
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Diagnóstico</div>
+                            <p class="mb-0">{{ orden.diagnostico|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Trabajo realizado</div>
+                            <p class="mb-0">{{ orden.trabajo_realizado|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-8">
                             <div class="text-muted small mb-1">Observaciones</div>
-                            <p class="mb-0">{{ orden.observaciones }}</p>
+                            <p class="mb-0">{{ orden.observaciones|default:"—" }}</p>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-muted small">Costo estimado</div>
+                                    {% if orden.costo_estimado %}
+                                    <strong>{{ orden.costo_estimado }}</strong>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-muted small">Costo final</div>
+                                    {% if orden.costo_final %}
+                                    <strong>{{ orden.costo_final }}</strong>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -67,16 +86,86 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="card">
+            <div class="card mb-3">
                 <div class="card-header bg-white"><strong>Progreso</strong></div>
                 <div class="card-body">
                     <div class="row g-2 text-center">
-                        <div class="col-3"><i class="bi bi-clipboard-check text-primary"></i><div class="small text-muted">Asignada</div></div>
-                        <div class="col-3"><i class="bi bi-play-circle text-primary"></i><div class="small text-muted">Ejecución</div></div>
-                        <div class="col-3"><i class="bi bi-check2-circle text-muted"></i><div class="small text-muted">Resuelta</div></div>
-                        <div class="col-3"><i class="bi bi-x-circle text-muted"></i><div class="small text-muted">Cerrada</div></div>
+                        <div class="col-3 {% if orden.estado == 'ASIGNADA' %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                            <i class="bi bi-clipboard-check"></i><div class="small">Asignada</div>
+                        </div>
+                        <div class="col-3 {% if orden.estado == 'EN_EJECUCION' %}text-primary fw-bold{% else %}text-muted{% endif %}">
+                            <i class="bi bi-play-circle"></i><div class="small">Ejecución</div>
+                        </div>
+                        <div class="col-3 {% if orden.estado == 'RESUELTA' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                            <i class="bi bi-check2-circle"></i><div class="small">Resuelta</div>
+                        </div>
+                        <div class="col-3 {% if orden.estado == 'CERRADA' %}text-success fw-bold{% else %}text-muted{% endif %}">
+                            <i class="bi bi-x-circle"></i><div class="small">Cerrada</div>
+                        </div>
                     </div>
-                    <hr>
+                    {% if orden.estado == 'CANCELADA' %}
+                    <div class="badge bg-danger mt-3">Cancelada</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header bg-white"><strong><i class="bi bi-lightning-charge me-1"></i>Acciones</strong></div>
+                <div class="card-body">
+                    {% if orden_terminal %}
+                    <p class="text-muted mb-0">Esta orden está {{ orden.estado|estado_label|lower }}, no admite más cambios.</p>
+                    {% elif form_estado.fields.estado.choices %}
+                    <form method="post" action="{% url 'ordenes:cambiar_estado' orden.pk %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form_estado.estado.id_for_label }}">Transición</label>
+                            {{ form_estado.estado }}
+                            {{ form_estado.estado.errors }}
+                        </div>
+                        {% if orden.estado == 'ASIGNADA' or orden.estado == 'EN_EJECUCION' %}
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form_estado.diagnostico.id_for_label }}">Diagnóstico</label>
+                            {{ form_estado.diagnostico }}
+                            {{ form_estado.diagnostico.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form_estado.trabajo_realizado.id_for_label }}">Trabajo realizado</label>
+                            {{ form_estado.trabajo_realizado }}
+                            {{ form_estado.trabajo_realizado.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form_estado.observaciones.id_for_label }}">Observaciones</label>
+                            {{ form_estado.observaciones }}
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label" for="{{ form_estado.costo_estimado.id_for_label }}">Costo estimado</label>
+                                {{ form_estado.costo_estimado }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label" for="{{ form_estado.costo_final.id_for_label }}">Costo final</label>
+                                {{ form_estado.costo_final }}
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if puede_cerrar %}
+                        <div class="mb-2">
+                            <label class="form-label" for="{{ form_estado.puntuacion.id_for_label }}">Calificación (1 a 5) <span class="text-danger">*</span></label>
+                            {{ form_estado.puntuacion }}
+                            {{ form_estado.puntuacion.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="{{ form_estado.comentario_calificacion.id_for_label }}">Comentario de la calificación</label>
+                            {{ form_estado.comentario_calificacion }}
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-lg me-1"></i> Aplicar transición
+                        </button>
+                    </form>
+                    {% else %}
+                    <p class="text-muted mb-0">Orden {{ orden.estado|estado_label|lower }}, sin transiciones disponibles.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

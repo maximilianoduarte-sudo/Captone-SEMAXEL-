@@ -1,35 +1,54 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.models import Usuario
+from accounts.roles import ofertas_visibles, puede_ver_oferta, rol_requerido, rol_usuario
 from tecnicos.models import Tecnico
 from tickets.models import OrdenTrabajo, Ticket, TicketHistorial
 
 from .models import OfertaTicket
+from .services import expirar_ofertas_vencidas
 
 
 def _tecnico_actual(request):
-    """Perfil de técnico del usuario autenticado (o el primero disponible)."""
+    """
+    Técnico asociado al usuario autenticado.
+
+    Para usuarios con perfil de técnico se devuelve su propio registro.
+    El superusuario (que toma a nombre de un técnico) usa el primer
+    técnico disponible como respaldo.
+    Returns None solo si: usuario es TECNICO pero no tiene registro Tecnico.
+    """
     if request.user.is_authenticated and hasattr(request.user, "tecnico"):
         return request.user.tecnico
+    if rol_usuario(request.user) == Usuario.Rol.TECNICO:
+        return None
     return Tecnico.objects.filter(estado=Tecnico.Estado.DISPONIBLE).first()
 
 
+@login_required
 def disponibles(request):
     """Ofertas de trabajo disponibles para técnicos (datos reales)."""
+    expirar_ofertas_vencidas(usuario=request.user)
+    qs = ofertas_visibles(request.user).filter(estado=OfertaTicket.Estado.DISPONIBLE)
     ofertas = (
-        OfertaTicket.objects.filter(estado=OfertaTicket.Estado.DISPONIBLE)
-        .select_related("ticket__sucursal", "ticket__categoria")
+        qs.select_related("ticket__sucursal", "ticket__categoria")
         .order_by("-fecha_publicacion")
     )
     context = {"ofertas": ofertas, "prioridades": dict(Ticket.Prioridad.choices)}
     return render(request, "ofertas/disponibles.html", context)
 
 
+@login_required
 def detalle(request, oid):
     """Detalle de una oferta con opción de tomarla."""
     oferta = get_object_or_404(OfertaTicket.objects.select_related("ticket__sucursal", "ticket__categoria"), pk=oid)
+    if not puede_ver_oferta(request.user, oferta):
+        raise PermissionDenied
     context = {
         "oferta": oferta,
         "prioridades": dict(Ticket.Prioridad.choices),
@@ -38,20 +57,44 @@ def detalle(request, oid):
     return render(request, "ofertas/detalle.html", context)
 
 
+@login_required
+@rol_requerido(Usuario.Rol.TECNICO)
 def tomar(request, oid):
-    """Toma la oferta: asigna técnico, crea la orden de trabajo y avanza estados."""
+    """Toma la oferta: asigna técnico, crea la orden de trabajo y avanza estados.
+
+    Solo el rol TECNICO puede tomar ofertas: el GESTOR las publica y
+    administra pero no las toma (el superusuario queda habilitado por
+    convención del sistema de permisos).
+    """
     oferta = get_object_or_404(OfertaTicket, pk=oid)
+
+    if not puede_ver_oferta(request.user, oferta):
+        raise PermissionDenied
 
     if oferta.estado != OfertaTicket.Estado.DISPONIBLE:
         messages.warning(request, "Esta oferta ya no está disponible.")
         return redirect("ofertas:detalle", oid=oferta.pk)
 
+    if oferta.fecha_vencimiento and oferta.fecha_vencimiento <= timezone.now():
+        expirar_ofertas_vencidas(usuario=request.user)
+        messages.warning(request, "Esta oferta venció y ya no está disponible.")
+        return redirect("ofertas:detalle", oid=oferta.pk)
+
     tecnico = _tecnico_actual(request)
     if tecnico is None:
-        messages.error(request, "No existe un perfil de técnico disponible para tomar la oferta.")
+        messages.error(
+            request,
+            "Tu usuario tiene rol Técnico pero no tiene un perfil de técnico "
+            "asociado. Pídele a un administrador que lo registre en la sección "
+            "Técnicos para poder tomar ofertas.",
+        )
         return redirect("ofertas:detalle", oid=oferta.pk)
 
     ticket = oferta.ticket
+
+    if not ticket.puede_transicionar_a(Ticket.Estado.EN_EJECUCION):
+        messages.warning(request, "El ticket ya no permite tomar la oferta.")
+        return redirect("ofertas:disponibles")
 
     oferta.tecnico = tecnico
     oferta.estado = OfertaTicket.Estado.TOMADA

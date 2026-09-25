@@ -1,10 +1,13 @@
 from django.contrib import messages
-from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.models import Usuario
+from accounts.roles import puede_ver_ticket, rol_requerido, tickets_visibles
 from ofertas.forms import OfertaForm
 from ofertas.models import OfertaTicket
 from tecnicos.models import Tecnico
@@ -13,20 +16,23 @@ from .forms import CambiarEstadoForm, TicketForm
 from .models import Categoria, EvidenciaTicket, Ticket, TicketHistorial
 
 
-def _proximo_numero():
-    """Genera el siguiente número de ticket (TK-00001, TK-00002, ...)."""
-    ultimo = Ticket.objects.order_by("-id").first()
-    if not ultimo or len(ultimo.numero) < 3 or not ultimo.numero.split("-")[-1].isdigit():
-        return "TK-00001"
+def _proximo_numero(sucursal):
+    """Siguiente número de ticket, con secuencia independiente por empresa.
+
+    Formato: <codigo_empresa>-<correlativo> (p. ej. SEMAXEL-00001). Como el
+    código de empresa es único, los números no colisionan entre empresas.
+    """
+    empresa = sucursal.empresa
+    prefix = f"{empresa.codigo}-"
+    ultimo = (
+        Ticket.objects.filter(sucursal__empresa=empresa, numero__startswith=prefix)
+        .order_by("-numero")
+        .first()
+    )
+    if not ultimo or not ultimo.numero.split("-")[-1].isdigit():
+        return f"{prefix}00001"
     numero_siguiente = int(ultimo.numero.split("-")[-1]) + 1
-    return f"TK-{numero_siguiente:05d}"
-
-
-def _usuario_actual(request):
-    """Usuario que reporta: el autenticado o, en su defecto, el primero activo."""
-    if request.user.is_authenticated:
-        return request.user
-    return User.objects.filter(is_active=True).order_by("id").first()
+    return f"{prefix}{numero_siguiente:05d}"
 
 
 def _registrar_historial(ticket, usuario, estado_anterior, estado_nuevo, comentario=""):
@@ -39,14 +45,25 @@ def _registrar_historial(ticket, usuario, estado_anterior, estado_nuevo, comenta
     )
 
 
+@login_required
+@rol_requerido(
+    Usuario.Rol.ADMIN,
+    Usuario.Rol.GESTOR,
+    Usuario.Rol.ENCARGADO,
+    Usuario.Rol.GERENCIA,
+)
 def lista(request):
-    """Listado paginado de tickets con búsqueda y filtros."""
+    """Listado paginado de tickets con búsqueda y filtros (alcance por rol).
+
+    No accesible para el rol TECNICO: el técnico llega a los trabajos vía
+    ofertas y a los tickets asociados a sus órdenes, no al listado general.
+    """
     query = request.GET.get("q", "")
     estado = request.GET.get("estado", "")
     prioridad = request.GET.get("prioridad", "")
     categoria = request.GET.get("categoria", "")
 
-    qs = Ticket.objects.select_related("sucursal", "categoria", "creador").all()
+    qs = tickets_visibles(request.user).select_related("sucursal", "categoria", "creador")
     if query:
         qs = qs.filter(
             Q(titulo__icontains=query)
@@ -76,34 +93,41 @@ def lista(request):
     return render(request, "tickets/lista.html", context)
 
 
+@login_required
 def detalle(request, numero):
     """Detalle completo de un ticket con historial y evidencias."""
     ticket = get_object_or_404(
         Ticket.objects.select_related("sucursal", "categoria", "creador"),
         numero=numero,
     )
+    if not puede_ver_ticket(request.user, ticket):
+        raise PermissionDenied
     context = {
         "ticket": ticket,
         "historial": ticket.historial.select_related("usuario").order_by("fecha_cambio")[:20],
         "evidencias": ticket.evidencias.all()[:10],
-        "form_estado": CambiarEstadoForm(initial={"estado": ticket.estado}),
+        "form_estado": CambiarEstadoForm(
+            initial={"estado": ticket.estado}, estado_actual=ticket.estado
+        ),
         "estados": dict(Ticket.Estado.choices),
         "prioridades": dict(Ticket.Prioridad.choices),
     }
     return render(request, "tickets/detalle.html", context)
 
 
+@login_required
+@rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO)
 def crear(request):
     """Formulario de creación de ticket (persistente, genera número e historial)."""
-    form = TicketForm(request.POST or None)
+    form = TicketForm(request.POST or None, user=request.user)
     if form.is_valid():
         ticket = form.save(commit=False)
-        creador = _usuario_actual(request)
+        creador = request.user
         if creador is None:
             messages.error(request, "No hay usuarios disponibles para registrar el ticket. Cree un usuario primero.")
             return render(request, "tickets/crear.html", {"form": form})
         ticket.creador = creador
-        ticket.numero = _proximo_numero()
+        ticket.numero = _proximo_numero(ticket.sucursal)
         ticket.estado = Ticket.Estado.ABIERTO
         ticket.save()
         _registrar_historial(
@@ -122,9 +146,19 @@ def crear(request):
     return render(request, "tickets/crear.html", context)
 
 
+@login_required
+@rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO)
 def publicar_oferta(request, numero):
     """Publica (o reactiva) la oferta asociada a un ticket."""
     ticket = get_object_or_404(Ticket, numero=numero)
+    if not puede_ver_ticket(request.user, ticket):
+        raise PermissionDenied
+    if not (ticket.estado in (Ticket.Estado.ABIERTO, Ticket.Estado.EN_REVISION, Ticket.Estado.PUBLICADO)):
+        messages.error(
+            request,
+            "No se puede publicar una oferta para un ticket en su estado actual.",
+        )
+        return redirect("tickets:detalle", numero=numero)
     oferta, _ = OfertaTicket.objects.get_or_create(ticket=ticket)
     form = OfertaForm(request.POST or None, instance=oferta)
 
@@ -135,7 +169,7 @@ def publicar_oferta(request, numero):
         if ticket.estado != Ticket.Estado.PUBLICADO:
             _registrar_historial(
                 ticket,
-                _usuario_actual(request),
+                request.user,
                 ticket.estado,
                 Ticket.Estado.PUBLICADO,
                 "Se publicó la oferta para técnicos.",
@@ -150,22 +184,34 @@ def publicar_oferta(request, numero):
     return render(request, "tickets/publicar_oferta.html", context)
 
 
+@login_required
+@rol_requerido(
+    Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO, Usuario.Rol.TECNICO
+)
 def cambiar_estado(request, numero):
     """Cambia el estado de un ticket y registra el cambio en el historial."""
     ticket = get_object_or_404(Ticket, numero=numero)
+    if not puede_ver_ticket(request.user, ticket):
+        raise PermissionDenied
     if request.method == "POST":
-        form = CambiarEstadoForm(request.POST, instance=ticket)
+        estado_anterior = ticket.estado
+        form = CambiarEstadoForm(
+            request.POST, instance=ticket, estado_actual=ticket.estado
+        )
         if form.is_valid():
             estado_nuevo = form.cleaned_data["estado"]
-            estado_anterior = ticket.estado
             if estado_anterior != estado_nuevo:
                 form.save()
-                if estado_nuevo in (Ticket.Estado.CERRADO, Ticket.Estado.CANCELADO):
+                if estado_nuevo in (
+                    Ticket.Estado.RESUELTO,
+                    Ticket.Estado.CERRADO,
+                    Ticket.Estado.CANCELADO,
+                ):
                     ticket.fecha_cierre = timezone.now()
                     ticket.save(update_fields=["fecha_cierre"])
                 _registrar_historial(
                     ticket,
-                    _usuario_actual(request),
+                    request.user,
                     estado_anterior,
                     estado_nuevo,
                     form.cleaned_data["comentario"],

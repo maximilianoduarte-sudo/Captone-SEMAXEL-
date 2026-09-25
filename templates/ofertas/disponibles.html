@@ -27,7 +27,7 @@
                         <span class="badge pill pr-{{ o.prioridad }}">{{ o.prioridad|prioridad_label }}</span>
                     </div>
                     <div class="text-muted small mb-2">
-                        <div><i class="bi bi-building me-1"></i>Sucursal: {{ o.sucursal }}</div>
+                        <div><i class="bi bi-building me-1"></i><span class="badge bg-light text-dark border me-1">{{ o.sucursal.empresa.codigo }}</span>Sucursal: {{ o.sucursal }}</div>
                         <div><i class="bi bi-tag me-1"></i>Categoría: {{ o.categoria }}</div>
                     </div>
                     <div class="d-flex align-items-center text-muted small mb-3">

@@ -1,6 +1,9 @@
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils import timezone
+
+from sla.models import SLAPolicy
 
 
 class Categoria(models.Model):
@@ -116,6 +119,39 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"{self.numero} - {self.titulo}"
+
+    # ---- Máquina de estados del ciclo de vida ----
+    TRANSICIONES_VALIDAS = {
+        Estado.ABIERTO: {Estado.EN_REVISION, Estado.PUBLICADO, Estado.EN_EJECUCION, Estado.CANCELADO},
+        Estado.EN_REVISION: {Estado.ABIERTO, Estado.PUBLICADO, Estado.EN_EJECUCION, Estado.CANCELADO},
+        Estado.PUBLICADO: {Estado.EN_EJECUCION, Estado.EN_REVISION, Estado.CANCELADO},
+        Estado.EN_EJECUCION: {Estado.RESUELTO, Estado.CANCELADO},
+        Estado.RESUELTO: {Estado.CERRADO, Estado.EN_EJECUCION},
+        Estado.CERRADO: set(),
+        Estado.CANCELADO: set(),
+    }
+
+    @classmethod
+    def transiciones_de(cls, estado):
+        """Destinos válidos a partir de un estado."""
+        return cls.TRANSICIONES_VALIDAS.get(estado, set())
+
+    def transiciones_validas(self):
+        """Destinos válidos a partir del estado actual del ticket."""
+        return self.transiciones_de(self.estado)
+
+    def puede_transicionar_a(self, estado_nuevo):
+        """True si la transición hacia el estado indicado es válida."""
+        return estado_nuevo in self.transiciones_validas()
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and self.fecha_limite_sla is None and self.sucursal_id:
+            politica = SLAPolicy.obtener(self.sucursal.empresa, self.prioridad)
+            if politica:
+                self.fecha_limite_sla = timezone.now() + timezone.timedelta(
+                    minutes=politica.tiempo_maximo_resolucion
+                )
+        super().save(*args, **kwargs)
 
     @property
     def fecha(self):
@@ -249,6 +285,28 @@ class OrdenTrabajo(models.Model):
     def descripcion(self):
         """Descripción del trabajo (reutiliza la del ticket)."""
         return self.ticket.descripcion
+
+    # ---- Máquina de estados de la orden ----
+    TRANSICIONES_VALIDAS = {
+        Estado.ASIGNADA: {Estado.EN_EJECUCION, Estado.CANCELADA},
+        Estado.EN_EJECUCION: {Estado.RESUELTA, Estado.CANCELADA},
+        Estado.RESUELTA: {Estado.CERRADA, Estado.EN_EJECUCION},
+        Estado.CERRADA: set(),
+        Estado.CANCELADA: set(),
+    }
+
+    @classmethod
+    def transiciones_de(cls, estado):
+        """Destinos válidos para una orden a partir de un estado."""
+        return cls.TRANSICIONES_VALIDAS.get(estado, set())
+
+    def transiciones_validas(self):
+        """Destinos válidos a partir del estado actual de la orden."""
+        return self.transiciones_de(self.estado)
+
+    def puede_transicionar_a(self, estado_nuevo):
+        """True si la transición hacia el estado indicado es válida."""
+        return estado_nuevo in self.transiciones_validas()
 
 
 class Calificacion(models.Model):
