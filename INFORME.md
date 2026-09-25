@@ -16,10 +16,12 @@ SLA y mantenimiento preventivo, e incluye un dashboard con indicadores.
 El proyecto se basa en **Django 5.2** con **MySQL 8.0**. A la fecha se ha
 completado la **instalación del framework**, la **estructura base**, el
 **modelado del dominio de datos** completo, un **prototipo visual navegable**
-con datos de demostración y la **Fase 4 (Conexión al ORM y CRUD persistente)**:
-todas las vistas principales consultan ahora la base de datos real, los
-formularios guardan en MySQL y existe un comando `seed_demo` para sembrar
-datos. El siguiente hito es **autenticación y permisos por rol** (Fase 5) y la
+con datos de demostración, la **Fase 4 (ORM y CRUD persistente)** y la
+**Fase 5 (autenticación y permisos por rol)**: login/logout reales con
+`django.contrib.auth`, todas las vistas protegidas con `@login_required`,
+acceso controlado por rol (decorador `rol_requerido`), alcance por rol
+(encargado ve solo sus sucursales, técnico solo sus órdenes), gestión de
+usuarios completa para ADMIN/GESTOR y sidebar dinámico. El siguiente hito es la
 **lógica de negocio del ciclo completo** (Fase 6).
 
 > Estado de verificación técnica (21/09/2026):
@@ -52,7 +54,7 @@ Capstone-SEMAXEL/
 ├── tickets/           # Tickets, órdenes de trabajo, calificaciones, evidencias, historial
 ├── ofertas/           # Ofertas de trabajo para técnicos (marketplace)
 ├── sla/               # Políticas de Acuerdo de Nivel de Servicio (SLA)
-├── mantenimiento/     # Mantenimiento preventivo (sin marcos aún)
+├── mantenimiento/     # Mantenimiento preventivo (planes y programaciones)
 ├── dashboard/         # Dashboard con indicadores y reportes
 ├── templates/         # Plantillas globales y por app (20 archivos)
 ├── static/css/        # style.css (337 líneas)
@@ -93,9 +95,9 @@ Capstone-SEMAXEL/
 - **tecnicos::Especialidad / Tecnico** — especialidades configurables; técnico 1-a-1 con usuario, documento único, M2M de especialidades y estados de disponibilidad.
 - **tickets::Categoria / Ticket / EvidenciaTicket / OrdenTrabajo / Calificacion / TicketHistorial** — entidad central con número único, prioridad, estado, tipo, fechas y SLA; índices por estado/prioridad/sucursal; orden de trabajo 1-a-1 con ticket; calificación máxima una por orden; historial de cambios de estado.
 - **ofertas::OfertaTicket** — marketplace 1-a-1 con ticket; técnico nulo al publicar; estados Disponible → Tomada → ... → Expirada y fechas.
-- **sla::SLAPolicy** — política con tiempos máximos de respuesta/resolución por prioridad (prioridad única).
+- **sla::SLAPolicy** — política con tiempos máximos de respuesta/resolución por prioridad; **por empresa** (específica) con política global de respaldo (única por empresa+prioridad).
 - Migraciones `0001_initial` / `0002_initial` **generadas y aplicadas** en todas las apps.
-- **Pendiente de modelado:** `mantenimiento` y `dashboard` (archivos vacíos de placeholder).
+- **mantenimiento::PlanMantenimiento / ProgramacionMantenimiento** — planes preventivos por sucursal con frecuencia, próxima ejecución y programaciones vinculadas a sus tickets generados; `dashboard` sin modelos (solo vistas).
 
 ### 5.3 Prototipo visual navegable (Fase 3) — con datos ficticios
 - **20 templates HTML** + `base.html` con sidebar, topbar, breadcrumbs, mensajes flash, Bootstrap 5, Bootstrap Icons y Chart.js.
@@ -124,6 +126,19 @@ Capstone-SEMAXEL/
 - **Topbar y perfil dinámicos** con el usuario autenticado; `logout` funcional.
 - **Verificado:** `manage.py check` sin problemas; `makemigrations --check` sin cambios (solo propiedades, sin migraciones); smoke test del cliente Django: 17 páginas en 200 y flujos POST (crear ticket, cambiar estado, tomar oferta, crear sucursal) en 302, con 0 fallos.
 
+### 5.5 Autenticación y permisos por rol (Fase 5)
+- **Login/logout reales** con `django.contrib.auth` (`accounts/views.LoginView` + `LogoutView` propio): credenciales validadas, error mostrado, anónimos redirigidos a `/login/`.
+- **`@login_required`** en todas las vistas de negocio (dashboard, reportes, tickets, órdenes, ofertas, sucursales, técnicos, mantenimiento, perfil).
+- **`accounts/roles.py`**: decorador `rol_requerido(*roles)`, helper `rol_usuario(user)` y `sucursales_visibles(user)` (alcance por rol).
+  - ADMIN/GESTOR: acceso total + gestión de usuarios.
+  - ENCARGADO: crea/cambia tickets y ve solo sus sucursales/tickets/órdenes.
+  - TECNICO: ofertas (publicadas y tomar), sus órdenes, tickets en lectura y perfil.
+  - GERENCIA: lectura global (tickets, órdenes, sucursales, reportes, mantenimiento).
+- **Gestión de usuarios** (`accounts/urls.py`): listado, alta y edición (rol, teléfono, contraseña opcional, activo) para ADMIN/GESTOR.
+- **Perfil editable** del usuario autenticado (nombre, apellido, correo, teléfono).
+- **Sidebar por rol** y página `403.html` personalizada (`handler403`).
+- **Verificado:** smoke test de 43 casos (login válido/inválido, anónimo→302, alcance de encargado/técnico, 403 por rol, creación de usuario, logout) con 0 fallos; BD restaurada al estado demo.
+
 ---
 
 ## 6. Lo que FALTA (diagnóstico por área)
@@ -137,25 +152,38 @@ Capstone-SEMAXEL/
 - ⚠️ Pendiente menor: fórmulas de especialidad/categoría todavía no tienen formulario propio de edición (se crean desde el admin).
 
 ### 6.2 Autenticación y permisos
-- ❌ **Login solo visual**: `dashboard/views.login` redirige sin validar credenciales ni crear sesión. Además, ese nombre **oculta** la vista `login` de Django.
-- ✅ Topbar y perfil **dinámicos** con el usuario autenticado y `logout` funcional.
-- ❌ Ninguna vista exige `login_required` ni permisos por rol.
-- ❌ El rol `Usuario.rol` existe en el modelo pero **no se aplica** en ninguna parte (sin decoradores, mixins ni asignación de grupos/permisos).
-- ❌ Gestión de usuarios (crear/editar usuarios y asignar rol + sucursales encargadas) pendiente.
+- ✅ **Login/logout reales** con `django.contrib.auth` (`LoginView` en `accounts`), ya no hay vista que oculte la estándar.
+- ✅ **`@login_required`** en todas las vistas de negocio; un anónimo es redirigido a `/login/`.
+- ✅ **Permisos por rol** con el decorador `rol_requerido(*roles)` (`accounts/roles.py`):
+  - ADMIN: gestión global (empresas, sucursales, tickets, técnicos, usuarios, ofertas, reportes).
+  - GESTOR: trabaja solo con su Empresa y sus sucursales (tickets, publicar/ofrecer trabajos), ve sus órdenes, mantenimiento y reportes; **no** administra usuarios ni técnicos globalmente ni toma ofertas.
+  - ENCARGADO: crea/cambia tickets, ve sus sucursales y sus tickets, ofertas y órdenes.
+  - TECNICO: accede directo a **Ofertas** (tomar), sus órdenes, tickets de su trabajo y perfil; **sin** dashboard ni listado general de tickets/sucursales/empresas.
+  - GERENCIA: lectura global (tickets, órdenes, sucursales, reportes, mantenimiento) y su empresa.
+- ✅ **Alcance por rol**: `sucursales_visibles()` filtra sucursales/tickets/órdenes (encargado solo las suyas; técnico solo sus órdenes; gestor solo su empresa).
+- ✅ **Sidebar dinámico** por rol y URL por rol (el menú y las vistas quedan protegidos según rol, no solo ocultos).
+- ✅ **Perfil real** del usuario autenticado, editable (nombre, apellido, correo, teléfono) y topbar dinámica.
+- ✅ **Gestión de usuarios**: listar, crear y editar usuarios (rol, teléfono, contraseña, activo) restringida a **ADMIN**; página de error **403** personalizada (el enlace "volver al inicio" apunta a Ofertas para TECNICO).
+- ✅ Al crear/editar un usuario con rol **TECNICO** se genera automáticamente su perfil de técnico (`Tecnico`); si un usuario TECNICO no tiene ese perfil, la toma de oferta lo advierte y no asigna la orden a otro técnico.
+- ✅ **Registro público** (`/registro/`, `/registro/gestor/`, `/registro/tecnico/`): una empresa se registra con su usuario **GESTOR** (crea la Empresa activa asociada) y un técnico se registra como **TECNICO** creando su perfil de técnico (con especialidades opcionales). **El registro nunca permite elegir rol ni otorga privilegios de ADMIN/staff/superusuario**; duplicados (usuario, RUT, código) se rechazan y un usuario ya autenticado no puede volver a registrarse.
+- ✅ **Badges de estado** (`static/css/style.css`): corregido el estado **Resuelta** de las órdenes (texto/borde blanco sobre blanco) y completados los estados faltantes del mismo sistema (CERRADA, CANCELADA y DISPONIBLE/TOMADA/COMPLETADA/EXPIRADA de ofertas) con contraste suficiente; se mantienen los demás estados.
+- ⚠️ Pendiente opcional: roles implementados a nivel de app (no con grupos/permisos de Django); suficiente para el alcance, grupos se pueden adoptar en la Fase 8.
 
 ### 6.3 Lógica de negocio (ciclo de vida)
-- ❌ **Transiciones de estado de ticket** no validadas (no hay máquina de estados).
-- ❌ **TicketHistorial existe pero no se registra** nada en él.
-- ❌ **Toma de oferta** no crea la `OrdenTrabajo` ni asigna técnico ni actualiza estados.
-- ❌ **SLA sin cálculo**: `fecha_limite_sla` nunca se calcula a partir de `SLAPolicy`.
-- ❌ **Órdenes de trabajo** (diagnóstico, costos, fechas, calificación) sin implementar la transición.
-- ❌ **Evidencias**: `EvidenciaTicket` no se usa; no hay subida de archivos (carpeta `media/` vacía).
-- ❌ **Vencimiento de ofertas** sin manejo (no hay contexto programado/`expiración`).
+- ✅ **TicketHistorial** ya se registra en la creación, cambio de estado y toma de oferta (desde Fase 4).
+- ✅ **Toma de oferta** ya crea la `OrdenTrabajo`, asigna técnico y actualiza estados de forma consistente (Fase 4/5).
+- ✅ **Transiciones de estado de ticket validadas** (máquina de estados en `Ticket.TRANSICIONES_VALIDAS` + `CambiarEstadoForm`, `publicar_oferta` y `tomar`): destino terminal CERRADO/CANCELADO no admite más cambios.
+- ✅ **SLA automático**: `fecha_limite_sla` se calcula al crear un ticket según la política efectiva (`SLAPolicy.obtener`: específica de la empresa o global de respaldo); el cumplimiento en dashboard/reportes mide tickets cerrados/resueltos dentro del plazo.
+- ✅ **Órdenes de trabajo con ciclo completo**: máquina de estados (Asignada → En ejecución → Resuelta → Cerrada, o Cancelada), captura de diagnóstico, trabajo realizado, observaciones, costos estimado/final y fechas (inicio/fin); sincroniza ticket (estado + historial), libera automáticamente al técnico si no tiene otras órdenes activas y registra la **calificación** (1 a 5, una por orden) al cerrar. El técnico solo ejecuta su propia orden (no puede cerrar/cancelar); estados terminales no admiten más cambios.
+- ⚠️ **Evidencias**: la creación de tickets ya acepta archivos multipart, pero sin validación de tipos/tamaño.
+- ✅ **Vencimiento de ofertas**: servicio `expirar_ofertas_vencidas` (lazy-check en el listado/detalle y en el dashboard + comando `python manage.py expirar_ofertas`) marca EXPIRADA las ofertas vencidas y devuelve el ticket PUBLICADO a EN_REVISION con registro en el histórico; tomar una oferta vencida no crea la orden.
 
 ### 6.4 Mantenimiento preventivo y reportes
-- ❌ **`mantenimiento` sin modelos**: los planes preventivos solo existen en `demo_data.PLANES_MANTENIMIENTO`.
-- ✅ **Dashboard con métricas reales** de la BD, incluyendo datos para los gráficos Chart.js.
-- ❌ **Reportes** parciales: la plantilla ya usa los indicadores globales calculados (`cumplimiento_sla`, `tickets_totales`, `calificacion_promedio`, `tecnicos_activos`), pero los gráficos dinámicos y reportes por sucursal/técnico/categoría quedan para la Fase 7.
+- ✅ **Modelos de mantenimiento preventivo**: `PlanMantenimiento` (sucursal, categoría, frecuencia, próxima ejecución, activo) y `ProgramacionMantenimiento` (historial y ticket generado por ejecución).
+- ✅ **Generación automática de tickets preventivos** desde los planes vencidos: servicio `generar_tickets_preventivos`, comando `python manage.py generar_preventivos` y acción "Generar preventivos" desde la vista (idempotente: no duplica preventivos abiertos; el ticket hereda el SLA de la empresa automáticamente al crearse).
+- ✅ **Reportes reales** con agregaciones del ORM: tickets por sucursal, por categoría, órdenes por técnico, por estado y por prioridad; cumplimiento SLA y calificación promedio.
+- ✅ **Gráficos Chart.js dinámicos** alimentados desde la BD (por sucursal, categoría, técnico, estado y prioridad).
+- ✅ Dashboard con métricas reales.
 
 ### 6.5 Calidad y robustez
 - ❌ **Sin tests** (los `tests.py` son placeholders), sin fixtures de prueba.
@@ -183,7 +211,7 @@ Cada fase termina con un **entregable verificable** y un commit propio.
 - **Criterio de salida:** los cambios hechos en la interfaz **persisten** en MySQL y se ven en listados/detalles y en el admin de Django.
 - **Estado:** ✔ cumplido y verificado con smoke test completo (0 fallos).
 
-### Fase 5 — Autenticación y permisos por rol 🔵 Prioridad alta
+### Fase 5 — Autenticación y permisos por rol ✅ Completada
 **Objetivo:** usuarios reales con acceso según rol.
 - Login/logout con `django.contrib.auth`; renombrar `dashboard/views.login` para no ocultar la vista estándar.
 - `@login_required` en las vistas de negocio y redirección correcta al login.
@@ -191,27 +219,29 @@ Cada fase termina con un **entregable verificable** y un commit propio.
 - Perfil real (datos del usuario autenticado) y topbar dinámica (quitar "Juan Pérez" hardcodeado).
 - Gestión de usuarios (crear/editar usuarios y asignar rol + sucursales encargadas).
 - **Criterio de salida:** un encargado solo ve sus sucursales, un técnico solo ofertas/órdenes, y un anónimo no puede entrar a ninguna sección.
+- **Estado:** ✔ cumplido y verificado con smoke test de 43 casos (respuestas 200/302/403 esperadas, login inválido con error, alcance por rol, gestión de usuarios; 0 fallos).
 
-### Fase 6 — Lógica de negocio del ciclo completo 🟠 Prioridad media
+### Fase 6 — Lógica de negocio del ciclo completo ✅ Completada
 **Objetivo:** flujo ticket → oferta → orden → cierre con SLA y evidencias.
-- Máquina de estados de **ticket** con transiciones válidas y registro automático en `TicketHistorial`.
-- **Publicar oferta** desde un ticket (marcar ticket PUBLICADO / oferta DISPONIBLE con vencimiento).
-- **Tomar oferta**: validar técnico elegible, crear `OrdenTrabajo`, asignar técnico, actualizar estados ticket/oferta/orden de forma consistente.
-- Avance de **órdenes de trabajo** (asignada → en ejecución → resuelta → cerrada) con diagnóstico, fechas y costos.
-- **Calificación** del técnico al cierre (max. 1 por orden).
-- **SLA automático**: al crear un ticket, calcular `fecha_limite_sla` según `SLAPolicy` por prioridad; indicador de cumplimiento.
-- Subida de **evidencias** (`EvidenciaTicket`) con validación de archivos.
-- Lógica de **vencimiento** de ofertas (tarea programada o lazy-check al listar).
+- ✅ **Máquina de estados de ticket** con transiciones válidas y registro automático en `TicketHistorial` (Cerrado/Cancelado terminales).
+- ✅ **Publicar oferta** desde un ticket (marcar ticket PUBLICADO / oferta DISPONIBLE con vencimiento).
+- ✅ **Tomar oferta**: validar técnico elegible, crear `OrdenTrabajo`, asignar técnico, actualizar estados ticket/oferta/orden de forma consistente.
+- ✅ Avance de **órdenes de trabajo** (asignada → en ejecución → resuelta → cerrada) con diagnóstico, fechas y costos.
+- ✅ **Calificación** del técnico al cierre (max. 1 por orden).
+- ✅ **SLA automático**: al crear un ticket se calcula `fecha_limite_sla` según `SLAPolicy` efectiva de la empresa (o global) y existe indicador de cumplimiento real.
+- ⚠️ Subida de **evidencias** (`EvidenciaTicket`) con validación de archivos (pendiente validación de tipos/tamaño).
+- ✅ Lógica de **vencimiento** de ofertas (lazy-check al listar/detalle/dashboard + comando `expirar_ofertas`).
 - **Criterio de salida:** se puede recorrer un ticket completo de principio a fin con persistencia y trazabilidad en historial.
+- **Estado:** ✔ cumplido y verificado con test integral de 38 casos (transiciones de orden con permisos, sincronización ticket/técnico/calificación, expiración de ofertas, alcance multi-empresa; 0 fallos).
 
-### Fase 7 — Mantenimiento preventivo y reportes reales 🟡 Prioridad media
+### Fase 7 — Mantenimiento preventivo y reportes reales ✅ Completada
 **Objetivo:** dar vida a `mantenimiento` y `dashboard`.
-- Modelos de **mantenimiento preventivo**: plan (nombre, frecuencia, sucursal), programaciones/historial de ejecuciones.
-- Generación automática de **tickets preventivos** desde los planes (tarea programada con Django-cron o Celery, o al abrir el dashboard).
-- **Reportes reales** con agregaciones del ORM (`annotate`/`aggregate`): tickets por estado/prioridad/sucursal/categoría, cumplimiento SLA, costos por técnico/sucursal.
-- Gráficos **Chart.js dinámicos** alimentados desde la BD (no hardcodeados).
-- Dashboard con métricas reales.
-- **Criterio de salida:** dashboard y reportes reflejan la BD; el mantenimiento preventivo genera tickets programados.
+- ✅ Modelos de **mantenimiento preventivo**: plan (nombre, frecuencia, sucursal), programaciones/historial de ejecuciones.
+- ✅ Generación automática de **tickets preventivos** desde los planes (comando `generar_preventivos`, botón en la vista y generación idempotente integrada al seed).
+- ✅ **Reportes reales** con agregaciones del ORM (`annotate`/`aggregate`): tickets por estado/prioridad/sucursal/categoría, órdenes por técnico, cumplimiento SLA y calificación promedio.
+- ✅ Gráficos **Chart.js dinámicos** alimentados desde la BD (no hardcodeados).
+- ✅ Dashboard con métricas reales.
+- ✅ **Criterio de salida:** dashboard y reportes reflejan la BD; el mantenimiento preventivo genera tickets programados.
 
 ### Fase 8 — Calidad, robustez y despliegue 🟢 Cierre
 **Objetivo:** dejar el sistema estable, testeado y desplegable.
@@ -229,15 +259,18 @@ Cada fase termina con un **entregable verificable** y un commit propio.
 | Fase | Esfuerzo | Impacto | Debería hacerse |
 |------|----------|---------|-----------------|
 | 4 · Conexión al ORM y CRUD | Alto | Muy alto | ✅ Completada |
-| 5 · Autenticación y roles | Medio | Muy alto | Ahora |
-| 6 · Ciclo de vida completo | Alto | Alto | Después de Fase 5 |
-| 7 · Preventivo y reportes | Medio | Medio | Después de Fase 6 |
+| 5 · Autenticación y roles | Medio | Muy alto | ✅ Completada |
+| 6 · Ciclo de vida completo | Alto | Alto | ✅ Completada |
+| 7 · Preventivo y reportes | Medio | Medio | ✅ Completada |
 | 8 · Calidad y despliegue | Medio | Alto (soporte) | Al final |
 
-**Recomendación:** la **Fase 4** (ORM conectado y CRUD persistente) ya está
-completada y verificada. El siguiente paso es la **Fase 5 (autenticación y
-roles)**, imprescindible para restringir el acceso por rol antes de la lógica
-de negocio del ciclo completo (Fase 6).
+**Recomendación:** con la **Fase 4** (ORM), **Fase 5** (autenticación y
+roles), **Fase 6** (lógica de negocio del ciclo completo: transiciones de
+ticket, SLA automático, ciclo completo de órdenes con calificación y
+vencimiento de ofertas) y **Fase 7** (reportes detallados y mantenimiento
+preventivo) completadas y verificadas, el siguiente paso es la **Fase 8
+(calidad, robustez y despliegue)**: suite de tests, errores personalizados,
+seguridad y documentación final.
 
 ---
 
@@ -266,3 +299,7 @@ python manage.py runserver
 ```
 
 Acceso: `http://127.0.0.1:8000/` · Admin: `http://127.0.0.1:8000/admin/`
+
+Después de `python manage.py seed_demo`, los usuarios demo usan la contraseña
+`Semaxel2026!` (`admin`, `gestor`, `jperez` = ENCARGADO, `cdiaz`/`atorres`/
+`lfernandez` = TECNICO).
