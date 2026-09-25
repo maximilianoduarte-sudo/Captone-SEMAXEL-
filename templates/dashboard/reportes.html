@@ -1,5 +1,4 @@
 {% extends 'base.html' %}
-{% load demo_extras %}
 
 {% block title %}Reportes | SEMAXEL{% endblock %}
 
@@ -37,17 +36,128 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header bg-white">
-            <strong><i class="bi bi-lightbulb me-2"></i>Nota</strong>
+    <div class="row g-3">
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white"><strong><i class="bi bi-building me-2"></i>Tickets por sucursal</strong></div>
+                <div class="card-body py-3">
+                    <canvas id="chartSucursal" height="120"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <p class="mb-0 text-muted">
-                En esta fase se muestran los indicadores globales. La generación de
-                reportes detallados (por sucursal, por técnico, por categoría y con
-                gráficos dinámicos) se aborda en la Fase 7 del roadmap.
-            </p>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white"><strong><i class="bi bi-tags me-2"></i>Tickets por categoría</strong></div>
+                <div class="card-body py-3">
+                    <canvas id="chartCategoria" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header bg-white"><strong><i class="bi bi-person-gear me-2"></i>Órdenes por técnico</strong></div>
+                <div class="card-body py-3">
+                    <canvas id="chartTecnico" height="120"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-6">
+            <div class="row g-3 pb-0">
+                <div class="col-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-white"><strong><i class="bi bi-pie-chart me-2"></i>Por estado</strong></div>
+                        <div class="card-body py-3">
+                            <canvas id="chartEstado" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-white"><strong><i class="bi bi-flag me-2"></i>Por prioridad</strong></div>
+                        <div class="card-body py-3">
+                            <canvas id="chartPrioridad" height="150"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header bg-white"><strong><i class="bi bi-table me-2"></i>Tickets por sucursal</strong></div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Sucursal</th><th class="text-center">Tickets</th></tr>
+                </thead>
+                <tbody>
+                    {% for r in sucursal_rows %}
+                    <tr>
+                        <td><strong>{{ r.label }}</strong></td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">{{ r.total }}</span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="text-center text-muted py-3">Sin datos.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{{ sucursal_labels|json_script:"sucursal-labels" }}
+{{ sucursal_values|json_script:"sucursal-values" }}
+{{ categoria_labels|json_script:"categoria-labels" }}
+{{ categoria_values|json_script:"categoria-values" }}
+{{ tecnico_labels|json_script:"tecnico-labels" }}
+{{ tecnico_values|json_script:"tecnico-values" }}
+{{ estado_labels|json_script:"estado-labels" }}
+{{ estado_values|json_script:"estado-values" }}
+{{ prioridad_labels|json_script:"prioridad-labels" }}
+{{ prioridad_values|json_script:"prioridad-values" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const colores = ['#0d6efd', '#f59e0b', '#8b5cf6', '#4f46e5', '#10b981', '#f97316', '#6b7280', '#dc2626', '#14b8a6', '#d946ef'];
+
+    function crearChart(id, tipo, ds) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        new Chart(el, {
+            type: tipo,
+            data: { labels: ds.labels, datasets: [ds.dataset] },
+            options: { responsive: true, maintainAspectRatio: false,
+                plugins: { legend: ds.legend !== undefined ? ds.legend : { display: false } } }
+        });
+    }
+
+    const JSONde = function (id) { return JSON.parse(document.getElementById(id).textContent); };
+
+    crearChart('chartSucursal', 'bar', {
+        labels: JSONde('sucursal-labels'),
+        dataset: { label: 'Tickets', data: JSONde('sucursal-values'), backgroundColor: colores }
+    });
+    crearChart('chartCategoria', 'bar', {
+        labels: JSONde('categoria-labels'),
+        dataset: { label: 'Tickets', data: JSONde('categoria-values'), backgroundColor: '#8b5cf6' }
+    });
+    crearChart('chartTecnico', 'bar', {
+        labels: JSONde('tecnico-labels'),
+        dataset: { label: 'Órdenes', data: JSONde('tecnico-values'), backgroundColor: '#10b981' }
+    });
+    crearChart('chartEstado', 'doughnut', {
+        labels: JSONde('estado-labels'),
+        dataset: { data: JSONde('estado-values'), backgroundColor: colores },
+        legend: { position: 'bottom' }
+    });
+    crearChart('chartPrioridad', 'doughnut', {
+        labels: JSONde('prioridad-labels'),
+        dataset: { data: JSONde('prioridad-values'), backgroundColor: ['#6b7280', '#f59e0b', '#f97316', '#dc2626'] },
+        legend: { position: 'bottom' }
+    });
+});
+</script>
 {% endblock %}

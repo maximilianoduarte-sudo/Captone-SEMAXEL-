@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} | SEMAXEL{% endblock %}
+
+{% block active_mantenimiento %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'mantenimiento:lista' %}">Mantenimiento</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ titulo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-4">{{ titulo }}</h4>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white"><strong><i class="bi bi-calendar-check me-2"></i>{{ titulo }}</strong></div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre <span class="text-danger">*</span></label>
+                                {{ form.nombre }}
+                                {{ form.nombre.errors }}
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
+                                {{ form.descripcion }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.sucursal.id_for_label }}">Sucursal <span class="text-danger">*</span></label>
+                                {{ form.sucursal }}
+                                {{ form.sucursal.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.categoria.id_for_label }}">Categoría <span class="text-danger">*</span></label>
+                                {{ form.categoria }}
+                                {{ form.categoria.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.frecuencia.id_for_label }}">Frecuencia <span class="text-danger">*</span></label>
+                                {{ form.frecuencia }}
+                                {{ form.frecuencia.errors }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="{{ form.fecha_proxima.id_for_label }}">Próxima ejecución <span class="text-danger">*</span></label>
+                                {{ form.fecha_proxima }}
+                                {{ form.fecha_proxima.errors }}
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end pb-2">
+                                <div class="form-check">
+                                    {{ form.activo }}
+                                    <label class="form-check-label" for="{{ form.activo.id_for_label }}">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-end mt-4">
+                            <a href="{% url 'mantenimiento:lista' %}" class="btn btn-outline-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i> Guardar plan</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ plan.nombre }} | SEMAXEL{% endblock %}
+
+{% block active_mantenimiento %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'mantenimiento:lista' %}">Mantenimiento</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ plan.nombre }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <h4 class="mb-0"><i class="bi bi-calendar-check me-2"></i>{{ plan.nombre }}</h4>
+        {% if puede_editar %}
+        <a href="{% url 'mantenimiento:editar' plan.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i> Editar plan
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <div class="fs-3 fw-bold">{{ plan.get_frecuencia_display }}</div>
+                <small class="text-muted">Frecuencia</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <div class="fs-3 fw-bold">{{ plan.fecha_proxima|date:"d/m/Y" }}</div>
+                <small class="text-muted">Próxima ejecución</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                <div class="fs-3 fw-bold">{{ plan.programaciones.count }}</div>
+                <small class="text-muted">Programaciones</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card text-center p-3">
+                {% if plan.activo %}
+                <div class="fs-3 fw-bold text-success">Activo</div>
+                {% else %}
+                <div class="fs-3 fw-bold text-secondary">Inactivo</div>
+                {% endif %}
+                <small class="text-muted">Estado</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-white"><strong><i class="bi bi-info-circle me-2"></i>Datos del plan</strong></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1 text-muted small">Sucursal</p>
+                    <p><a href="{% url 'sucursales:detalle' plan.sucursal.pk %}"><strong>{{ plan.sucursal.nombre }}</strong></a>
+                        <span class="badge bg-light text-dark border ms-1">{{ plan.sucursal.empresa.codigo }}</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1 text-muted small">Categoría</p>
+                    <p><strong>{{ plan.categoria.nombre }}</strong></p>
+                </div>
+                <div class="col-12">
+                    <p class="mb-1 text-muted small">Descripción</p>
+                    <p class="mb-0">{{ plan.descripcion|default:"—" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-white"><strong><i class="bi bi-list-check me-2"></i>Historial de programaciones</strong></div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha programada</th><th>Estado</th><th>Ticket generado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prog in programaciones %}
+                    <tr>
+                        <td>{{ prog.fecha_programada|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if prog.estado == 'GENERADO' %}
+                            <span class="badge bg-primary pill">Ticket generado</span>
+                            {% elif prog.estado == 'COMPLETADO' %}
+                            <span class="badge bg-success pill">Completado</span>
+                            {% elif prog.estado == 'OMITIDO' %}
+                            <span class="badge bg-secondary pill">Omitido</span>
+                            {% else %}
+                            <span class="badge bg-warning text-dark pill">Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if prog.ticket %}
+                            <a href="{% url 'tickets:detalle' prog.ticket.numero %}"><strong>{{ prog.ticket.numero }}</strong></a>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-4">Este plan aún no tiene programaciones.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

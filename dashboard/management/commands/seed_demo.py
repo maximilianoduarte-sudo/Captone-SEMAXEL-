@@ -16,7 +16,9 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from accounts.models import Usuario
-from mantenimiento import models as _mantenimiento  # noqa: F401  (evita warnings de app sin uso)
+from empresas.models import Empresa
+from mantenimiento import models as _mantenimiento  # noqa: F401
+from mantenimiento.models import PlanMantenimiento
 from ofertas.models import OfertaTicket
 from sla.models import SLAPolicy
 from sucursales.models import Sucursal
@@ -72,6 +74,7 @@ class Command(BaseCommand):
         for nombre, prioridad, respuesta, resolucion in sla_data:
             SLAPolicy.objects.get_or_create(
                 prioridad=prioridad,
+                empresa=None,
                 defaults={
                     "nombre": nombre,
                     "tiempo_maximo_respuesta": respuesta,
@@ -79,6 +82,18 @@ class Command(BaseCommand):
                 },
             )
         self.stdout.write("  SLA: políticas creadas")
+
+        # ---- Empresa ----
+        empresa, _ = Empresa.objects.get_or_create(
+            codigo="SEMAXEL",
+            defaults={
+                "nombre": "SEMAXEL",
+                "rut": "76.128.123-4",
+                "ciudad": "Santiago",
+                "region": "Metropolitana",
+            },
+        )
+        self.stdout.write("  empresa: lista")
 
         # ---- Usuarios ----
         def crear_usuario(username, first, last, email, rol, tecnico=False, is_staff=False, is_superuser=False):
@@ -95,7 +110,13 @@ class Command(BaseCommand):
             )
             user.set_password(PASS)
             user.save()
-            Usuario.objects.get_or_create(user=user, defaults={"rol": rol})
+            Usuario.objects.get_or_create(
+                user=user,
+                defaults={
+                    "rol": rol,
+                    "empresa": None if rol == "TECNICO" else empresa,
+                },
+            )
             return user
 
         admin_user = crear_usuario("admin", "Administrador", "SEMAXEL", "admin@semaxel.cl", "ADMIN", is_staff=True, is_superuser=True)
@@ -119,6 +140,7 @@ class Command(BaseCommand):
             suc, _ = Sucursal.objects.get_or_create(
                 codigo=codigo,
                 defaults={
+                    "empresa": empresa,
                     "nombre": nombre,
                     "direccion": direccion,
                     "comuna": comuna,
@@ -209,7 +231,7 @@ class Command(BaseCommand):
             oferta, _ = OfertaTicket.objects.get_or_create(ticket=ticket, defaults=defaults)
             return oferta
 
-        crea_oferta("TK-00003", "DISPONIBLE", dias_vencimiento=2)
+        crea_oferta("TK-00003", "DISPONIBLE", dias_vencimiento=-1)
         crea_oferta("TK-00007", "DISPONIBLE", dias_vencimiento=1)
         crea_oferta("TK-00008", "DISPONIBLE", dias_vencimiento=4)
         crea_oferta("TK-00009", "DISPONIBLE", dias_vencimiento=3)
@@ -265,5 +287,230 @@ class Command(BaseCommand):
             defaults={"tecnico": tecnicos["atorres"], "puntuacion": 5, "comentario": "Excelente trabajo."},
         )
         self.stdout.write("  órdenes de trabajo: creadas")
+
+        # ================= Segunda empresa (aislamiento multi-empresa) =================
+        empresa_b, _ = Empresa.objects.get_or_create(
+            codigo="EMPB",
+            defaults={
+                "nombre": "TecnoMant SPA",
+                "rut": "77.123.456-5",
+                "ciudad": "Temuco",
+                "region": "Araucanía",
+            },
+        )
+        self.stdout.write("  empresa B: lista")
+
+        # ---- SLA específico de la empresa B (por empresa) ----
+        sla_data_b = [
+            ("SLA Crítica TecnoMant", "CRITICA", 10, 45),
+            ("SLA Alta TecnoMant", "ALTA", 20, 120),
+            ("SLA Media TecnoMant", "MEDIA", 45, 240),
+            ("SLA Baja TecnoMant", "BAJA", 90, 480),
+        ]
+        for nombre, prioridad, respuesta, resolucion in sla_data_b:
+            SLAPolicy.objects.get_or_create(
+                prioridad=prioridad,
+                empresa=empresa_b,
+                defaults={
+                    "nombre": nombre,
+                    "tiempo_maximo_respuesta": respuesta,
+                    "tiempo_maximo_resolucion": resolucion,
+                },
+            )
+        self.stdout.write("  SLA B: políticas por empresa creadas")
+
+        def crear_usuario_b(username, first, last, email, rol, is_staff=False):
+            user, _ = User.objects.get_or_create(
+                username=username,
+                defaults={
+                    "first_name": first,
+                    "last_name": last,
+                    "email": email,
+                    "is_staff": is_staff,
+                    "is_active": True,
+                },
+            )
+            user.set_password(PASS)
+            user.save()
+            Usuario.objects.get_or_create(
+                user=user,
+                defaults={"rol": rol, "empresa": empresa_b},
+            )
+            return user
+
+        gestor_b = crear_usuario_b(
+            "gestionb", "Gabriela", "Fuentes", "gestionb@tecnomant.cl", "GESTOR", is_staff=True
+        )
+        encargado_b = crear_usuario_b(
+            "encargadob", "Enrique", "Rojas", "encargado@tecnomant.cl", "ENCARGADO"
+        )
+        self.stdout.write("  usuarios B: creados")
+
+        suc_data_b = [
+            ("Centro", "CEN", "Manuel Montt 555, Temuco", "Temuco", "Temuco", "Araucanía", "+56 45 2231 100", "centro@tecnomant.cl"),
+            ("Mall Plaza", "MAL", "Av. San Martín 890, Temuco", "Temuco", "Temuco", "Araucanía", "+56 45 2231 200", "mall@tecnomant.cl"),
+        ]
+        sucursales_b = {}
+        for nombre, codigo, direccion, comuna, ciudad, region, tel, correo in suc_data_b:
+            suc, _ = Sucursal.objects.get_or_create(
+                codigo=codigo,
+                defaults={
+                    "empresa": empresa_b,
+                    "nombre": nombre,
+                    "direccion": direccion,
+                    "comuna": comuna,
+                    "ciudad": ciudad,
+                    "region": region,
+                    "telefono": tel,
+                    "correo": correo,
+                },
+            )
+            sucursales_b[nombre] = suc
+        sucursales_b["Centro"].encargados.add(encargado_b)
+        sucursales_b["Mall Plaza"].encargados.add(encargado_b)
+        self.stdout.write("  sucursales B: creadas")
+
+        tk_data_b = [
+            ("EMPB-00001", "Falla de bomba de agua", "Centro", "Plomería", "ALTA", "ABIERTO", gestor_b, "La bomba del estanque elevado no presuriza. Riesgo de corte de suministro principal."),
+            ("EMPB-00002", "Climatización de sala de servidores", "Mall Plaza", "Aire acondicionado", "MEDIA", "PUBLICADO", encargado_b, "El equipo de climatización de la sala de servidores opera a media capacidad."),
+            ("EMPB-00003", "Cortocircuito en bodega", "Centro", "Fallo eléctrico", "CRITICA", "EN_EJECUCION", encargado_b, "Cortocircuito intermitente en tablero de bodega. Requiere revisión eléctrica urgente."),
+        ]
+        tickets_b = {}
+        for numero, titulo, suc_nombre, cat_nombre, prioridad, estado, creador, descripcion in tk_data_b:
+            tk, _ = Ticket.objects.get_or_create(
+                numero=numero,
+                defaults={
+                    "titulo": titulo,
+                    "sucursal": sucursales_b[suc_nombre],
+                    "categoria": categorias[cat_nombre],
+                    "prioridad": prioridad,
+                    "estado": estado,
+                    "creador": creador,
+                    "descripcion": descripcion,
+                },
+            )
+            tickets_b[numero] = tk
+        for numero, ticket in tickets_b.items():
+            TicketHistorial.objects.get_or_create(
+                ticket=ticket,
+                estado_nuevo=ticket.estado,
+                defaults={
+                    "usuario": ticket.creador,
+                    "estado_anterior": None,
+                    "comentario": "Creación del ticket por incidencia.",
+                },
+            )
+
+        def crea_oferta_b(numero, estado, tecnico=None, dias_vencimiento=2, tomada=None):
+            ticket = tickets_b[numero]
+            defaults = {"estado": estado}
+            if tecnico:
+                defaults["tecnico"] = tecnico
+                defaults["fecha_tomada"] = tomada or ahora
+            defaults["fecha_vencimiento"] = ahora + timezone.timedelta(days=dias_vencimiento)
+            oferta, _ = OfertaTicket.objects.get_or_create(ticket=ticket, defaults=defaults)
+            return oferta
+
+        crea_oferta_b("EMPB-00002", "DISPONIBLE", dias_vencimiento=3)
+        crea_oferta_b("EMPB-00003", "TOMADA", tecnico=tecnicos["cdiaz"], tomada=ahora - timezone.timedelta(hours=2))
+
+        def crea_orden_b(numero, tecnico, estado, inicio=None, fin=None, diagnostico="", trabajo="", observaciones=""):
+            ticket = tickets_b[numero]
+            orden, _ = OrdenTrabajo.objects.get_or_create(
+                ticket=ticket,
+                defaults={
+                    "tecnico": tecnico,
+                    "oferta": ticket.oferta if hasattr(ticket, "oferta") else None,
+                    "estado": estado,
+                    "fecha_inicio": inicio,
+                    "fecha_fin": fin,
+                    "diagnostico": diagnostico,
+                    "trabajo_realizado": trabajo,
+                    "observaciones": observaciones,
+                },
+            )
+            return orden
+
+        crea_orden_b(
+            "EMPB-00003", tecnicos["cdiaz"], "EN_EJECUCION",
+            inicio=ahora - timezone.timedelta(hours=1),
+            diagnostico="Posible falso contacto en tablero de bodega.",
+            trabajo="Revisión de empalmes y protecciones en curso.",
+            observaciones="Se aislará circuito mientras se repara.",
+        )
+        self.stdout.write("  tickets, ofertas y órdenes B: creadas")
+
+        # ---- Planes de mantenimiento preventivo ----
+        plan_sem_data = [
+            ("Mantención A/A", "Ñuñoa", "Aire acondicionado", "SEMESTRAL", ahora + timezone.timedelta(days=15)),
+            ("Limpieza filtros eléctricos", "Providencia", "Fallo eléctrico", "MENSUAL", ahora + timezone.timedelta(days=5)),
+            ("Revisión de grifería y sellos", "Santiago Centro", "Plomería", "TRIMESTRAL", ahora - timezone.timedelta(days=3)),
+        ]
+        for nombre, suc_nombre, cat_nombre, frecuencia, fecha in plan_sem_data:
+            PlanMantenimiento.objects.get_or_create(
+                nombre=nombre,
+                sucursal=sucursales[suc_nombre],
+                defaults={
+                    "descripcion": f"Ejecución preventiva programada del plan {nombre}.",
+                    "categoria": categorias[cat_nombre],
+                    "frecuencia": frecuencia,
+                    "fecha_proxima": fecha,
+                },
+            )
+        plan_b_data = [
+            ("Mantenimiento bomba de agua", "Centro", "Plomería", "MENSUAL", ahora - timezone.timedelta(days=1)),
+            ("Clima sala de servidores", "Mall Plaza", "Aire acondicionado", "BIMESTRAL", ahora + timezone.timedelta(days=10)),
+        ]
+        for nombre, suc_nombre, cat_nombre, frecuencia, fecha in plan_b_data:
+            PlanMantenimiento.objects.get_or_create(
+                nombre=nombre,
+                sucursal=sucursales_b[suc_nombre],
+                defaults={
+                    "descripcion": f"Ejecución preventiva programada del plan {nombre}.",
+                    "categoria": categorias[cat_nombre],
+                    "frecuencia": frecuencia,
+                    "fecha_proxima": fecha,
+                },
+            )
+        self.stdout.write("  planes de mantenimiento: creados")
+
+        # Generación inicial de los preventivos vencidos (idempotente)
+        from mantenimiento.services import generar_tickets_preventivos
+
+        generados = generar_tickets_preventivos()
+        self.stdout.write(f"  preventivos: {generados} ticket(s) generado(s)")
+
+        # ---- Backfill SLA: fecha_limite_sla en tickets sin ella (idempotente) ----
+        actualizados = 0
+        for ticket_sla in (
+            Ticket.objects.filter(fecha_limite_sla__isnull=True)
+            .select_related("sucursal__empresa")
+        ):
+            politica = SLAPolicy.obtener(ticket_sla.sucursal.empresa, ticket_sla.prioridad)
+            if politica:
+                base = ticket_sla.fecha_creacion or timezone.now()
+                ticket_sla.fecha_limite_sla = base + timezone.timedelta(
+                    minutes=politica.tiempo_maximo_resolucion
+                )
+                ticket_sla.save(update_fields=["fecha_limite_sla"])
+                actualizados += 1
+        self.stdout.write(f"  SLA: backfill fecha_limite_sla en {actualizados} tickets")
+
+        # ---- Backfill fecha_cierre para tickets cerrados/resueltos (idempotente) ----
+        cerrados_ci = 0
+        for ticket_ci in Ticket.objects.filter(
+            estado__in=[Ticket.Estado.CERRADO, Ticket.Estado.RESUELTO],
+            fecha_cierre__isnull=True,
+        ):
+            orden_ci = OrdenTrabajo.objects.filter(ticket=ticket_ci).first()
+            fecha_ci = (
+                orden_ci.fecha_fin if orden_ci and orden_ci.fecha_fin
+                else ticket_ci.fecha_actualizacion
+            )
+            if fecha_ci:
+                ticket_ci.fecha_cierre = fecha_ci
+                ticket_ci.save(update_fields=["fecha_cierre"])
+                cerrados_ci += 1
+        self.stdout.write(f"  SLA: backfill fecha_cierre en {cerrados_ci} tickets cerrados/resueltos")
 
         self.stdout.write(self.style.SUCCESS(f"Datos de demostración cargados. Todos los usuarios usan la contraseña: {PASS}"))

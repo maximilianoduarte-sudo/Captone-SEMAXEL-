@@ -23,7 +23,7 @@
             <div class="stat-card">
                 <div class="stat-icon bg-primary-soft"><i class="bi bi-inbox"></i></div>
                 <div class="stat-info">
-                    <div class="value">24</div>
+                    <div class="value">{{ tickets_abiertos }}</div>
                     <div class="label">Tickets abiertos</div>
                 </div>
             </div>
@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
         data: {
             labels: ['Cumple','No cumple'],
             datasets: [{
-                data: [{{ cumplimiento_sla }}, {{ 100|add:"-92" }}],
+                data: [{{ cumplimiento_sla }}, {{ no_cumplimiento_sla }}],
                 backgroundColor: ['#10b981','#e5e7eb']
             }]
         },
