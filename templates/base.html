@@ -34,36 +34,67 @@
             <span>SEMAXEL</span>
         </div>
         <div class="sidebar-sub">
-            Gestión de Mantenimiento
+            {% if empresa %}{{ empresa.nombre }}{% else %}Gestión de Mantenimiento{% endif %}
         </div>
         <nav class="sidebar-nav">
+            {% if rol == "ADMIN" or rol == "GESTOR" or rol == "ENCARGADO" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'dashboard' %}" class="side-link {% block active_dashboard %}{% endblock %}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
+            {% endif %}
+            {% if rol == "ADMIN" or rol == "GESTOR" or rol == "ENCARGADO" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'tickets:lista' %}" class="side-link {% block active_tickets %}{% endblock %}">
                 <i class="bi bi-ticket-perforated"></i> Tickets
             </a>
+            {% endif %}
+            {% if rol == "TECNICO" or rol == "ENCARGADO" or rol == "ADMIN" or rol == "GESTOR" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'ofertas:disponibles' %}" class="side-link {% block active_ofertas %}{% endblock %}">
                 <i class="bi bi-briefcase"></i> Ofertas
             </a>
+            {% endif %}
             <a href="{% url 'ordenes:lista' %}" class="side-link {% block active_ordenes %}{% endblock %}">
                 <i class="bi bi-list-check"></i> Órdenes de Trabajo
             </a>
+            {% if rol == "ADMIN" or rol == "GESTOR" or rol == "ENCARGADO" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'sucursales:lista' %}" class="side-link {% block active_sucursales %}{% endblock %}">
                 <i class="bi bi-building"></i> Sucursales
             </a>
+            {% endif %}
+            {% if rol == "ADMIN" or es_superuser %}
+            <a href="{% url 'empresas:lista' %}" class="side-link {% block active_empresas %}{% endblock %}">
+                <i class="bi bi-bank"></i> Empresas
+            </a>
+            {% elif rol == "GESTOR" or rol == "GERENCIA" %}
+            {% if empresa %}
+            <a href="{% url 'empresas:detalle' empresa.pk %}" class="side-link {% block active_empresa %}{% endblock %}">
+                <i class="bi bi-bank"></i> Empresa
+            </a>
+            {% endif %}
+            {% endif %}
+            {% if rol == "ADMIN" or rol == "ENCARGADO" or es_superuser %}
             <a href="{% url 'tecnicos:lista' %}" class="side-link {% block active_tecnicos %}{% endblock %}">
                 <i class="bi bi-person-gear"></i> Técnicos
             </a>
+            {% endif %}
+            {% if rol == "ADMIN" or rol == "GESTOR" or rol == "ENCARGADO" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'mantenimiento:lista' %}" class="side-link {% block active_mantenimiento %}{% endblock %}">
                 <i class="bi bi-calendar-check"></i> Mantenimiento
             </a>
+            {% endif %}
+            {% if rol == "ADMIN" or rol == "GESTOR" or rol == "GERENCIA" or es_superuser %}
             <a href="{% url 'reportes' %}" class="side-link {% block active_reportes %}{% endblock %}">
                 <i class="bi bi-bar-chart-line"></i> Reportes
             </a>
+            {% endif %}
+            {% if rol == "ADMIN" or es_superuser %}
+            <a href="{% url 'usuarios' %}" class="side-link {% block active_usuarios %}{% endblock %}">
+                <i class="bi bi-people"></i> Usuarios
+            </a>
+            {% endif %}
         </nav>
         <div class="sidebar-footer">
-        <small>&copy; {% now "Y" %} SEMAXEL</small>
+        {% if empresa %}<small>{{ empresa.codigo }}</small>{% endif %}
+        <small>&copy; {% now "Y" %} {% if empresa %}{{ empresa.nombre }}{% else %}SEMAXEL{% endif %}</small>
     </div>
 </aside>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -78,7 +109,7 @@
                 {% block breadcrumbs %}
                 <nav aria-label="breadcrumb">
                     <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Inicio</a></li>
+                        <li class="breadcrumb-item"><a href="{% if rol == 'TECNICO' %}{% url 'ofertas:disponibles' %}{% else %}{% url 'dashboard' %}{% endif %}">Inicio</a></li>
                         {% block breadcrumbs_items %}{% endblock %}
                     </ol>
                 </nav>
@@ -89,7 +120,7 @@
                     <div class="avatar">{{ user.get_full_name|default:user.username|slice:":1"|default:"S" }}</div>
                     <div class="user-meta d-none d-sm-block">
                         <strong>{{ user.get_full_name|default:user.username|default:"Invitado" }}</strong>
-                        <small>{% if user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}</small>
+                        <small>{% if user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}{% if empresa %} · <span class="badge bg-light text-dark">{{ empresa.codigo }}</span>{% endif %}</small>
                     </div>
                     <i class="bi bi-chevron-down"></i>
                 </button>

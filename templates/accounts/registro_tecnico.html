@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registro de técnico | SEMAXEL{% endblock %}
+
+{% block body_class %}login-body{% endblock %}
+
+{% block body %}
+<div class="register-card card">
+    <div class="login-header">
+        <i class="bi bi-person-wrench"></i>
+        <h2>Registrarme como técnico</h2>
+        <p>Tu perfil quedará disponible para tomar ofertas de trabajo</p>
+    </div>
+    <div class="card-body p-4">
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger py-2">
+            {% for error in form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        <form method="post" action="{% url 'registro_tecnico' %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                {% for campo in form %}
+                {% if campo.name != "especialidades" %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                    {{ campo }}
+                    {% if campo.help_text %}<div class="form-text">{{ campo.help_text }}</div>{% endif %}
+                    {% for error in campo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                {% endfor %}
+                <div class="col-12">
+                    <label class="form-label" for="{{ form.especialidades.id_for_label }}">{{ form.especialidades.label }}</label>
+                    {{ form.especialidades }}
+                    {% if form.especialidades.help_text %}<div class="form-text">{{ form.especialidades.help_text }}</div>{% endif %}
+                    {% for error in form.especialidades.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <a href="{% url 'registro' %}" class="small text-muted">← Elegir otro tipo de cuenta</a>
+                <button type="submit" class="btn btn-success px-4">Crear perfil de técnico</button>
+            </div>
+        </form>
+        <p class="text-center mt-3 mb-0">
+            <a href="{% url 'login' %}" class="small">¿Ya tienes cuenta? Inicia sesión</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

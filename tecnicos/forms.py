@@ -1,10 +1,18 @@
 from django import forms
+from django.contrib.auth.models import User
 
 from .models import Especialidad, Tecnico
 
 
 class TecnicoForm(forms.ModelForm):
     """Formulario de creación/edición de técnicos."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        qs = User.objects.filter(perfil__rol="TECNICO")
+        if self.instance.pk:
+            qs = qs.exclude(pk=self.instance.usuario.pk)
+        self.fields["usuario"].queryset = qs.exclude(tecnico__isnull=False)
 
     class Meta:
         model = Tecnico

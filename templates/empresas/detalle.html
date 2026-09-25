@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ empresa.nombre }} | Empresas | SEMAXEL{% endblock %}
+
+{% block active_empresas %}active{% endblock %}
+
+{% block breadcrumbs_items %}
+<li class="breadcrumb-item"><a href="{% url 'empresas:lista' %}">Empresas</a></li>
+<li class="breadcrumb-item active" aria-current="page">{{ empresa.codigo }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+        <div>
+            <h4 class="mb-0">{{ empresa.nombre }}
+                {% if empresa.estado == 'ACTIVA' %}
+                <span class="badge bg-success pill">Activa</span>
+                {% else %}
+                <span class="badge bg-secondary pill">Inactiva</span>
+                {% endif %}
+            </h4>
+            <span class="text-muted"><span class="badge bg-light text-dark border">{{ empresa.codigo }}</span> RUT {{ empresa.rut }}</span>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header bg-light fw-semibold">Información</div>
+                <div class="card-body">
+                    <table class="table table-sm align-middle mb-0">
+                        <tr><th class="w-25">Dirección</th><td>{{ empresa.direccion|default:"—" }}</td></tr>
+                        <tr><th>Comuna</th><td>{{ empresa.comuna|default:"—" }}</td></tr>
+                        <tr><th>Ciudad</th><td>{{ empresa.ciudad|default:"—" }}</td></tr>
+                        <tr><th>Región</th><td>{{ empresa.region|default:"—" }}</td></tr>
+                        <tr><th>Teléfono</th><td>{{ empresa.telefono|default:"—" }}</td></tr>
+                        <tr><th>Correo</th><td>{{ empresa.correo|default:"—" }}</td></tr>
+                        <tr><th>Fecha de creación</th><td>{{ empresa.fecha_creacion|date:"d/m/Y H:i" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100">
+                <div class="card-header bg-light fw-semibold">Tickets por estado</div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-3 mb-2">
+                        <span class="display-6 fw-bold">{{ total_tickets }}</span>
+                        <span class="text-muted">tickets en total</span>
+                    </div>
+{% for e in estado_tickets %}
+{% if e.cantidad %}
+<span class="badge bg-secondary pill me-1">{{ e.etiqueta }}: {{ e.cantidad }}</span>
+{% endif %}
+{% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-light fw-semibold">Políticas SLA efectivas</div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr><th>Prioridad</th><th>Respuesta máx.</th><th>Resolución máx.</th><th>Fuente</th></tr>
+                </thead>
+                <tbody>
+                    {% for p in politicas_sla %}
+                    <tr>
+                        <td>{{ p.etiqueta }}</td>
+                        <td>{{ p.respuesta }} min</td>
+                        <td>{{ p.resolucion }} min</td>
+                        <td>
+                            {% if p.especifica %}
+                            <span class="badge bg-primary">Específica</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Global</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-3">Sin políticas SLA definidas.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light fw-semibold">Sucursales</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Nombre</th><th>Ciudad</th><th>Encargado</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for s in sucursales %}
+                            <tr>
+                                <td><a href="{% url 'sucursales:detalle' s.id %}"><strong>{{ s.nombre }}</strong></a></td>
+                                <td>{{ s.ciudad|default:"—" }}</td>
+                                <td>{{ s.encargado|default:"—" }}</td>
+                                <td>
+                                    {% if s.estado == 'ACTIVA' %}
+                                    <span class="badge bg-success pill">Activa</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary pill">Inactiva</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted py-3">Sin sucursales.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-light fw-semibold">Usuarios</div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Usuario</th><th>Nombre</th><th>Rol</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for u in usuarios %}
+                            <tr>
+                                <td><strong>{{ u.user.username }}</strong></td>
+                                <td>{{ u.user.get_full_name|default:"—" }}</td>
+                                <td><span class="badge bg-primary">{{ u.get_rol_display }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="3" class="text-center text-muted py-3">Sin usuarios.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

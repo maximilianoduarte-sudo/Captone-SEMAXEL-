@@ -11,12 +11,18 @@ class Sucursal(models.Model):
         ACTIVA = "ACTIVA", "Activa"
         INACTIVA = "INACTIVA", "Inactiva"
 
+    empresa = models.ForeignKey(
+        "empresas.Empresa",
+        on_delete=models.PROTECT,
+        related_name="sucursales",
+        verbose_name="Empresa",
+        help_text="Empresa a la que pertenece la sucursal.",
+    )
     nombre = models.CharField("Nombre", max_length=150)
     codigo = models.CharField(
         "Código",
         max_length=20,
-        unique=True,
-        help_text="Identificador único y corto de la sucursal.",
+        help_text="Identificador corto de la sucursal, único dentro de su empresa.",
     )
     direccion = models.CharField("Dirección", max_length=255)
     comuna = models.CharField("Comuna", max_length=100, blank=True)
@@ -44,6 +50,12 @@ class Sucursal(models.Model):
         verbose_name = "Sucursal"
         verbose_name_plural = "Sucursales"
         ordering = ["nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["empresa", "codigo"],
+                name="uniq_sucursal_codigo_por_empresa",
+            ),
+        ]
 
     def __str__(self):
         return self.nombre

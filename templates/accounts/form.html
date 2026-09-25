@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ titulo }} | SEMAXEL{% endblock %}
+
+{% block active_usuarios %}active{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <h4 class="mb-1">{{ titulo }}</h4>
+    <span class="text-muted d-block mb-4">Gestión de cuentas y roles del sistema</span>
+
+    <div class="card">
+        <div class="card-body">
+            <form method="post" class="row g-3">
+                {% csrf_token %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.username.id_for_label }}">Usuario</label>
+                    {{ form.username }}
+                    {% for error in form.username.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.rol.id_for_label }}">Rol</label>
+                    {{ form.rol }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.first_name.id_for_label }}">Nombre</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.last_name.id_for_label }}">Apellido</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.email.id_for_label }}">Correo electrónico</label>
+                    {{ form.email }}
+                    {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.telefono.id_for_label }}">Teléfono</label>
+                    {{ form.telefono }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.empresa.id_for_label }}">Empresa</label>
+                    {{ form.empresa }}
+                    <div class="form-text">Dejar vacío solo para el rol Técnico.</div>
+                    {% for error in form.empresa.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% if form.password %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
+                    {{ form.password }}
+                    {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                {% if form.password2 %}
+                <div class="col-md-6">
+                    <label class="form-label" for="{{ form.password2.id_for_label }}">Confirmar contraseña</label>
+                    {{ form.password2 }}
+                    {% for error in form.password2.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">Cuenta activa</label>
+                    </div>
+                </div>
+                {% if form.non_field_errors %}
+                <div class="col-12">
+                    {% for error in form.non_field_errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                </div>
+                {% endif %}
+                <div class="col-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Guardar
+                    </button>
+                    <a href="{% url 'usuarios' %}" class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

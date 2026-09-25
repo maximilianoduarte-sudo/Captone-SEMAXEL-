@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registro | SEMAXEL{% endblock %}
+
+{% block body_class %}login-body{% endblock %}
+
+{% block body %}
+<div class="register-card card">
+    <div class="login-header">
+        <i class="bi bi-tools"></i>
+        <h2>Crear cuenta</h2>
+        <p>Elige el tipo de cuenta que deseas crear</p>
+    </div>
+    <div class="card-body p-4">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-bank display-4 text-primary"></i>
+                        <h5 class="mt-3 mb-1">Empresa (GESTOR)</h5>
+                        <p class="small text-muted mb-3">
+                            Tu empresa se registra junto a su usuario GESTOR, que administra
+                            sus sucursales, tickets y publica las ofertas de trabajo.
+                        </p>
+                        <a href="{% url 'registro_gestor' %}" class="btn btn-primary">
+                            Registrarme como empresa
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body text-center p-4">
+                        <i class="bi bi-person-wrench display-4 text-success"></i>
+                        <h5 class="mt-3 mb-1">Técnico</h5>
+                        <p class="small text-muted mb-3">
+                            Tú perfil de técnico se crea para que tomes ofertas publicadas por
+                            las empresas y registres tus órdenes de trabajo.
+                        </p>
+                        <a href="{% url 'registro_tecnico' %}" class="btn btn-success">
+                            Registrarme como técnico
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-center mt-4 mb-0">
+            <a href="{% url 'login' %}" class="small">¿Ya tienes cuenta? Inicia sesión</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

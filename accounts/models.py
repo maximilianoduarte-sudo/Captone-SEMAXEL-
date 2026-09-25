@@ -30,6 +30,16 @@ class Usuario(models.Model):
         choices=Rol.choices,
         default=Rol.ENCARGADO,
     )
+    empresa = models.ForeignKey(
+        "empresas.Empresa",
+        on_delete=models.PROTECT,
+        related_name="usuarios",
+        verbose_name="Empresa",
+        null=True,
+        blank=True,
+        help_text="Empresa a la que pertenece el usuario. Los técnicos son "
+        "independientes de las empresas y pueden dejarlo vacío.",
+    )
     telefono = models.CharField(
         "Teléfono",
         max_length=30,

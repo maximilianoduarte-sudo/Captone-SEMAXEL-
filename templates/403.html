@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Acceso denegado | SEMAXEL{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <div class="display-1 text-danger mb-3"><i class="bi bi-shield-lock"></i></div>
+                    <h4 class="mb-2">Acceso denegado</h4>
+                    <p class="text-muted mb-4">
+                        No tienes permisos para ver esta sección con tu rol actual.
+                    </p>
+                    <a href="{% if rol == 'TECNICO' %}{% url 'ofertas:disponibles' %}{% else %}{% url 'dashboard' %}{% endif %}" class="btn btn-primary">
+                        <i class="bi bi-speedometer2 me-1"></i>Volver al inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
