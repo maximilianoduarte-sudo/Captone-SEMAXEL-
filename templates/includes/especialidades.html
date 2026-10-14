@@ -1,0 +1,12 @@
+{% comment %}
+Lista las especialidades de un técnico como etiquetas Bootstrap.
+
+Uso: {% include 'includes/especialidades.html' with especialidades=tecnico.especialidades.all %}
+Se recibe un iterable de `Especialidad`; se usa `.all` para aprovechar el
+prefetch_related de la vista y evitar consultas N+1.
+{% endcomment %}
+{% for especialidad in especialidades %}
+<span class="badge bg-light text-dark border me-1 mb-1">{{ especialidad.nombre }}</span>
+{% empty %}
+<span class="text-muted">Sin especialidades</span>
+{% endfor %}

@@ -17,7 +17,7 @@
             <div class="avatar" style="width:70px;height:70px;font-size:1.8rem">{{ tecnico.nombre|slice:":1" }}</div>
             <div>
                 <h3 class="mb-0">{{ tecnico.nombre }}</h3>
-                <small class="text-muted">{{ tecnico.especialidades|join:" · " }}</small>
+                <div class="small">{% include 'includes/especialidades.html' with especialidades=tecnico.especialidades.all %}</div>
             </div>
         </div>
         {% if es_superuser %}

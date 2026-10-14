@@ -29,7 +29,9 @@ class TecnicoForm(forms.ModelForm):
             "telefono": forms.TextInput(attrs={"class": "form-control", "placeholder": "+56 9 1234 5678"}),
             "documento": forms.TextInput(attrs={"class": "form-control", "placeholder": "RUT o documento"}),
             "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
-            "especialidades": forms.SelectMultiple(attrs={"class": "form-select"}),
+            "especialidades": forms.SelectMultiple(
+                attrs={"class": "form-select", "size": 5}
+            ),
             "estado": forms.Select(attrs={"class": "form-select"}),
         }
 

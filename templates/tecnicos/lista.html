@@ -38,7 +38,7 @@
                         <div class="avatar">{{ t.nombre|slice:":1" }}</div>
                         <div class="flex-grow-1">
                             <a href="{% url 'tecnicos:detalle' t.id %}" class="text-decoration-none"><h5 class="mb-0">{{ t.nombre }}</h5></a>
-                            <small class="text-muted">{{ t.especialidades|join:" · " }}</small>
+                            <div class="small">{% include 'includes/especialidades.html' with especialidades=t.especialidades.all %}</div>
                         </div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center mb-2">
