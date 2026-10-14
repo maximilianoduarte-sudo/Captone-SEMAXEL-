@@ -40,6 +40,7 @@ class EspecialidadesTecnicoTests(TestCase):
         form = TecnicoForm(
             data={
                 "usuario": nuevo_usuario.pk,
+                "telefono": "+56 9 1234 5678",
                 "estado": Tecnico.Estado.DISPONIBLE,
                 "especialidades": [self.electricidad.pk, self.gasfiteria.pk],
             }

@@ -105,17 +105,25 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
+    # Rechaza contraseñas parecidas a los datos del usuario.
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
+    # Longitud mínima exigida por el sistema.
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
     },
+    # Rechaza contraseñas comunes y demasiado simples.
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    # Exige mayúscula, número y símbolo (accounts.validators).
+    {
+        'NAME': 'accounts.validators.ComplejidadPasswordValidator',
     },
 ]
 

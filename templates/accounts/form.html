@@ -38,6 +38,7 @@
                 <div class="col-md-6">
                     <label class="form-label" for="{{ form.telefono.id_for_label }}">Teléfono</label>
                     {{ form.telefono }}
+                    {% for error in form.telefono.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label" for="{{ form.empresa.id_for_label }}">Empresa</label>
@@ -49,6 +50,7 @@
                 <div class="col-md-6">
                     <label class="form-label" for="{{ form.password.id_for_label }}">{{ form.password.label }}</label>
                     {{ form.password }}
+                    {% if form.password.help_text %}<div class="form-text">{{ form.password.help_text }}</div>{% endif %}
                     {% for error in form.password.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                 </div>
                 {% endif %}
@@ -56,6 +58,7 @@
                 <div class="col-md-6">
                     <label class="form-label" for="{{ form.password2.id_for_label }}">Confirmar contraseña</label>
                     {{ form.password2 }}
+                    {% if form.password2.help_text %}<div class="form-text">{{ form.password2.help_text }}</div>{% endif %}
                     {% for error in form.password2.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                 </div>
                 {% endif %}

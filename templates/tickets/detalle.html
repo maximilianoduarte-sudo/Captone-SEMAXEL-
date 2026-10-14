@@ -35,7 +35,7 @@
     <div class="row g-3">
         <div class="col-lg-8">
             <div class="card mb-3">
-                <div class="card-header bg-white"><strong>InformaciÃ³n del ticket</strong></div>
+                <div class="card-header bg-white"><strong>Información del ticket</strong></div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -43,7 +43,7 @@
                             <strong>{{ ticket.sucursal }}</strong>
                         </div>
                         <div class="col-md-6">
-                            <div class="text-muted small">CategorÃ­a</div>
+                            <div class="text-muted small">Categoría</div>
                             <strong>{{ ticket.categoria }}</strong>
                         </div>
                         <div class="col-md-4">
@@ -60,11 +60,11 @@
                         </div>
                         <div class="col-12">
                             <div class="text-muted small">Creador</div>
-                            <strong>{{ ticket.creador.get_full_name|default:ticket.creador.username }}</strong> Â· <span class="text-muted">{{ ticket.fecha }}</span>
+                            <strong>{{ ticket.creador.get_full_name|default:ticket.creador.username }}</strong> · <span class="text-muted">{{ ticket.fecha }}</span>
                         </div>
                         <div class="col-12">
                             <hr>
-                            <div class="text-muted small mb-1">DescripciÃ³n</div>
+                            <div class="text-muted small mb-1">Descripción</div>
                             <p class="mb-0">{{ ticket.descripcion }}</p>
                         </div>
                     </div>
@@ -120,7 +120,7 @@
                     </a>
                     {% endif %}
                     <a href="{% url 'ordenes:lista' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-list-check me-1"></i> Ver Ã³rdenes de trabajo
+                        <i class="bi bi-list-check me-1"></i> Ver órdenes de trabajo
                     </a>
                 </div>
             </div>

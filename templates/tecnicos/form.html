@@ -36,6 +36,7 @@
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.telefono.id_for_label }}">Teléfono</label>
                                 {{ form.telefono }}
+                                {% for error in form.telefono.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.documento.id_for_label }}">Documento</label>

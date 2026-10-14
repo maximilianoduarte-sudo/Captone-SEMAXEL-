@@ -1,11 +1,19 @@
 from django import forms
 from django.contrib.auth.models import User
 
+from accounts.validators import TelefonoField
+
 from .models import Especialidad, Tecnico
 
 
 class TecnicoForm(forms.ModelForm):
     """Formulario de creación/edición de técnicos."""
+
+    telefono = TelefonoField(
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "+56 9 1234 5678"}
+        )
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -26,7 +34,6 @@ class TecnicoForm(forms.ModelForm):
         ]
         widgets = {
             "usuario": forms.Select(attrs={"class": "form-select"}),
-            "telefono": forms.TextInput(attrs={"class": "form-control", "placeholder": "+56 9 1234 5678"}),
             "documento": forms.TextInput(attrs={"class": "form-control", "placeholder": "RUT o documento"}),
             "descripcion": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
             "especialidades": forms.SelectMultiple(

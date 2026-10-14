@@ -1,12 +1,12 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
 
 from empresas.models import Empresa
 from tecnicos.models import Especialidad
 
 from .models import Usuario
+from .validators import PASSWORD_HELP_TEXT, TelefonoField, validar_password
 
 
 class LoginForm(AuthenticationForm):
@@ -29,7 +29,7 @@ class _UsuarioBaseForm(forms.ModelForm):
     """Base para crear/editar usuarios: datos de auth.User + rol, teléfono y empresa."""
 
     rol = forms.ChoiceField(choices=Usuario.Rol.choices, label="Rol")
-    telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
+    telefono = TelefonoField()
     empresa = forms.ModelChoiceField(
         queryset=Empresa.objects.none(),
         required=False,
@@ -76,6 +76,20 @@ class _UsuarioBaseForm(forms.ModelForm):
             )
         return empresa
 
+    def _validar_password(self):
+        """Valida la contraseña solo si el formulario define ese campo.
+
+        En la edición, dejarla vacía significa conservar la actual: no se
+        revalida ni se obliga a cambiarla.
+        """
+        cleaned = self.cleaned_data
+        if "password" not in cleaned:
+            return
+        try:
+            validar_password(cleaned.get("password"), cleaned, self.instance)
+        except forms.ValidationError as error:
+            self.add_error("password", error)
+
     def _guardar_perfil(self, user):
         empresa = self.cleaned_data["empresa"]
         if self._perfil is not None:
@@ -98,6 +112,7 @@ class UsuarioCrearForm(_UsuarioBaseForm):
 
     password = forms.CharField(
         label="Contraseña",
+        help_text=PASSWORD_HELP_TEXT,
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
     )
     password2 = forms.CharField(
@@ -117,6 +132,7 @@ class UsuarioCrearForm(_UsuarioBaseForm):
         confirmacion = cleaned.get("password2")
         if password and confirmacion and password != confirmacion:
             self.add_error("password2", "Las contraseñas no coinciden.")
+        self._validar_password()
         return cleaned
 
     def save(self, commit=True):
@@ -131,9 +147,12 @@ class UsuarioCrearForm(_UsuarioBaseForm):
 class UsuarioEditarForm(_UsuarioBaseForm):
     """Edición de usuario; la contraseña queda vacía si no se desea cambiar."""
 
+    _password_nueva = ""
+
     password = forms.CharField(
         label="Nueva contraseña (dejar en blanco para conservarla)",
         required=False,
+        help_text=PASSWORD_HELP_TEXT,
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
     )
 
@@ -143,10 +162,30 @@ class UsuarioEditarForm(_UsuarioBaseForm):
             "is_active", "rol", "telefono", "password",
         ]
 
+    def clean_password(self):
+        """Conserva el hash actual cuando no se envía una contraseña nueva.
+
+        `User.password` es un campo del modelo: si se deja el formulario en
+        blanco, `construct_instance` copiaría "" al hash y el usuario quedaría
+        sin poder iniciar sesión. Se devuelve el hash existente y se guarda
+        aparte la contraseña realmente enviada, si la hay.
+        """
+        self._password_nueva = self.cleaned_data.get("password") or ""
+        return self.instance.password
+
+    def clean(self):
+        cleaned = super().clean()
+        if self._password_nueva:
+            try:
+                validar_password(self._password_nueva, cleaned, self.instance)
+            except forms.ValidationError as error:
+                self.add_error("password", error)
+        return cleaned
+
     def save(self, commit=True):
         user = super().save(commit=False)
-        if self.cleaned_data.get("password"):
-            user.set_password(self.cleaned_data["password"])
+        if self._password_nueva:
+            user.set_password(self._password_nueva)
         if commit:
             user.save()
             self._guardar_perfil(user)
@@ -156,7 +195,7 @@ class UsuarioEditarForm(_UsuarioBaseForm):
 class MiPerfilForm(forms.ModelForm):
     """El usuario autenticado actualiza sus propios datos básicos y teléfono."""
 
-    telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
+    telefono = TelefonoField()
 
     class Meta:
         model = User
@@ -192,6 +231,7 @@ class _RegistroBaseForm(forms.Form):
     email = forms.EmailField(label="Correo electrónico")
     password = forms.CharField(
         label="Contraseña",
+        help_text=PASSWORD_HELP_TEXT,
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
     )
     password2 = forms.CharField(
@@ -218,7 +258,7 @@ class _RegistroBaseForm(forms.Form):
             self.add_error("password2", "Las contraseñas no coinciden.")
         if password:
             try:
-                validate_password(password, self.cleaned_data.get("username"))
+                validar_password(password, cleaned)
             except forms.ValidationError as error:
                 self.add_error("password", error)
 
@@ -290,7 +330,7 @@ class RegistroGestorForm(_RegistroBaseForm):
 class RegistroTecnicoForm(_RegistroBaseForm):
     """Registro público de un Técnico de mantenimiento."""
 
-    telefono = forms.CharField(max_length=30, required=False, label="Teléfono")
+    telefono = TelefonoField()
     especialidades = forms.ModelMultipleChoiceField(
         queryset=Especialidad.objects.filter(activo=True),
         required=False,

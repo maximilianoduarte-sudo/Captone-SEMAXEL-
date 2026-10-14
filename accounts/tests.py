@@ -7,6 +7,8 @@ Escenario cubierto:
 """
 
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -16,9 +18,16 @@ from mantenimiento.models import PlanMantenimiento
 from ofertas.models import OfertaTicket
 from sucursales.forms import SucursalForm
 from sucursales.models import Sucursal
+from tecnicos.forms import TecnicoForm
 from tecnicos.models import Especialidad, Tecnico
 from tickets.models import Categoria, OrdenTrabajo, Ticket
 
+from .forms import (
+    MiPerfilForm,
+    RegistroTecnicoForm,
+    UsuarioCrearForm,
+    UsuarioEditarForm,
+)
 from .models import Usuario
 from .roles import (
     es_encargado_de,
@@ -870,7 +879,7 @@ class CuentasTecnicoTests(EscenarioEncargadoMixin, TestCase):
                 "email": "tecnico@ejemplo.com",
                 "is_active": "on",
                 "rol": Usuario.Rol.TECNICO,
-                "telefono": "",
+                "telefono": "+56 9 1234 5678",
             },
         )
 
@@ -987,3 +996,263 @@ class DocumentoOpcionalTests(EscenarioEncargadoMixin, TestCase):
 
         self.assertIsNone(self.tecnico.documento or None)
         self.assertIsNone(segundo.documento)
+
+
+class PasswordValidatorsTests(TestCase):
+    """Reglas de contraseña: longitud, mayúscula, número, símbolo y rechazo de comunes."""
+
+    def test_acepta_password_fuerte(self):
+        validate_password("ClaveSegura1!")
+
+    def test_rechaza_demasiado_corta(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validate_password("Ab1!xy")
+        self.assertTrue(
+            any("corta" in mensaje.lower() for mensaje in ctx.exception.messages)
+        )
+
+    def test_rechaza_sin_mayuscula(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validate_password("abcdefg1!")
+        self.assertTrue(
+            any("mayúscula" in mensaje for mensaje in ctx.exception.messages)
+        )
+
+    def test_rechaza_sin_numero(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validate_password("Abcdefgh!")
+        self.assertTrue(any("número" in mensaje for mensaje in ctx.exception.messages))
+
+    def test_rechaza_sin_simbolo(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validate_password("Abcdefg1")
+        self.assertTrue(any("símbolo" in mensaje for mensaje in ctx.exception.messages))
+
+    def test_rechaza_password_comun(self):
+        with self.assertRaises(ValidationError) as ctx:
+            validate_password("password")
+        self.assertTrue(
+            any("común" in mensaje for mensaje in ctx.exception.messages)
+        )
+
+
+class RegistroTecnicoValidacionTests(TestCase):
+    """Registro público de técnico: teléfono obligatorio y contraseña validada."""
+
+    def _datos(self, **overrides):
+        datos = {
+            "username": "nuevo_tecnico",
+            "first_name": "Ana",
+            "last_name": "Torres",
+            "email": "ana@example.com",
+            "telefono": "+56 9 1234 5678",
+            "password": "ClaveSegura1!",
+            "password2": "ClaveSegura1!",
+        }
+        datos.update(overrides)
+        return datos
+
+    def test_registro_valido_crea_usuario_con_telefono(self):
+        form = RegistroTecnicoForm(self._datos())
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertEqual(user.perfil.telefono, "+56 9 1234 5678")
+
+    def test_rechaza_telefono_vacio_y_no_guarda(self):
+        form = RegistroTecnicoForm(self._datos(telefono=""))
+        self.assertFalse(form.is_valid())
+        self.assertIn("telefono", form.errors)
+        self.assertFalse(User.objects.filter(username="nuevo_tecnico").exists())
+
+    def test_rechaza_telefono_solo_espacios_y_no_guarda(self):
+        form = RegistroTecnicoForm(self._datos(telefono="     "))
+        self.assertFalse(form.is_valid())
+        self.assertIn("telefono", form.errors)
+        self.assertFalse(User.objects.filter(username="nuevo_tecnico").exists())
+
+    def test_rechaza_password_debil_y_no_guarda(self):
+        form = RegistroTecnicoForm(
+            self._datos(password="debil", password2="debil")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+        self.assertFalse(User.objects.filter(username="nuevo_tecnico").exists())
+
+
+class UsuarioAdminValidacionTests(TestCase):
+    """Alta y edición de usuarios desde el panel: teléfono y contraseña."""
+
+    def _datos_crear(self, **overrides):
+        datos = {
+            "username": "gestor1",
+            "first_name": "Gestor",
+            "last_name": "Uno",
+            "email": "gestor@example.com",
+            "rol": Usuario.Rol.TECNICO,
+            "telefono": "+56 9 1111 1111",
+            "password": "ClaveSegura1!",
+            "password2": "ClaveSegura1!",
+        }
+        datos.update(overrides)
+        return datos
+
+    def test_crear_rechaza_telefono_vacio(self):
+        form = UsuarioCrearForm(self._datos_crear(telefono=""))
+        self.assertFalse(form.is_valid())
+        self.assertIn("telefono", form.errors)
+        self.assertFalse(User.objects.filter(username="gestor1").exists())
+
+    def test_crear_rechaza_password_debil_y_no_guarda(self):
+        form = UsuarioCrearForm(
+            self._datos_crear(password="debil", password2="debil")
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+        self.assertEqual(User.objects.count(), 0)
+
+    def test_crear_valido(self):
+        form = UsuarioCrearForm(self._datos_crear())
+        self.assertTrue(form.is_valid(), form.errors)
+        user = form.save()
+        self.assertTrue(user.check_password("ClaveSegura1!"))
+
+    def test_editar_password_en_blanco_conserva_la_actual(self):
+        user = User.objects.create_user(
+            username="editado", password="clave-de-prueba", email="edit@example.com"
+        )
+        perfil = Usuario.objects.create(
+            user=user, rol=Usuario.Rol.TECNICO, empresa=None, telefono="+56 9 0000 0000"
+        )
+        form = UsuarioEditarForm(
+            data={
+                "username": "editado",
+                "first_name": "",
+                "last_name": "",
+                "email": "edit@example.com",
+                "is_active": True,
+                "rol": Usuario.Rol.TECNICO,
+                "telefono": "+56 9 2222 2222",
+                "password": "",
+            },
+            instance=user,
+            perfil=perfil,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("clave-de-prueba"))
+
+    def test_editar_password_nueva_fuerte_se_actualiza(self):
+        user = User.objects.create_user(
+            username="editado", password="clave-de-prueba", email="edit@example.com"
+        )
+        perfil = Usuario.objects.create(
+            user=user, rol=Usuario.Rol.TECNICO, empresa=None, telefono="+56 9 0000 0000"
+        )
+        form = UsuarioEditarForm(
+            data={
+                "username": "editado",
+                "first_name": "",
+                "last_name": "",
+                "email": "edit@example.com",
+                "is_active": True,
+                "rol": Usuario.Rol.TECNICO,
+                "telefono": "+56 9 2222 2222",
+                "password": "NuevaClave1!",
+            },
+            instance=user,
+            perfil=perfil,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("NuevaClave1!"))
+        self.assertFalse(user.check_password("clave-de-prueba"))
+
+    def test_editar_rechaza_password_nueva_debil(self):
+        user = User.objects.create_user(
+            username="editado", password="clave-de-prueba", email="edit@example.com"
+        )
+        perfil = Usuario.objects.create(
+            user=user, rol=Usuario.Rol.TECNICO, empresa=None, telefono="+56 9 0000 0000"
+        )
+        form = UsuarioEditarForm(
+            data={
+                "username": "editado",
+                "first_name": "",
+                "last_name": "",
+                "email": "edit@example.com",
+                "is_active": True,
+                "rol": Usuario.Rol.TECNICO,
+                "telefono": "+56 9 2222 2222",
+                "password": "debil",
+            },
+            instance=user,
+            perfil=perfil,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("password", form.errors)
+        user.refresh_from_db()
+        self.assertTrue(user.check_password("clave-de-prueba"))
+
+
+class TelefonoTecnicoValidacionTests(TestCase):
+    """Alta/edición de técnicos: el teléfono es obligatorio."""
+
+    def setUp(self):
+        self.usuario = User.objects.create_user(username="tec_form", password="x")
+        Usuario.objects.create(
+            user=self.usuario, rol=Usuario.Rol.TECNICO, empresa=None
+        )
+
+    def test_rechaza_telefono_vacio(self):
+        form = TecnicoForm(
+            data={
+                "usuario": self.usuario.pk,
+                "telefono": "",
+                "estado": Tecnico.Estado.DISPONIBLE,
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("telefono", form.errors)
+
+    def test_guarda_telefono_valido_recortado(self):
+        form = TecnicoForm(
+            data={
+                "usuario": self.usuario.pk,
+                "telefono": "  +56 9 3333 3333  ",
+                "estado": Tecnico.Estado.DISPONIBLE,
+            }
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        tecnico = form.save()
+        self.assertEqual(tecnico.telefono, "+56 9 3333 3333")
+
+
+class MiPerfilValidacionTests(TestCase):
+    """Edición del propio perfil: el teléfono es obligatorio."""
+
+    def test_rechaza_telefono_vacio(self):
+        user = User.objects.create_user(username="perfil1", password="x")
+        Usuario.objects.create(user=user, rol=Usuario.Rol.TECNICO, empresa=None)
+        form = MiPerfilForm(
+            data={
+                "first_name": "Ana",
+                "last_name": "Torres",
+                "email": "ana@example.com",
+                "telefono": "   ",
+            },
+            instance=user,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("telefono", form.errors)
+
+
+class LoginPasswordExistenteTests(TestCase):
+    """Las contraseñas ya existentes siguen sirviendo para iniciar sesión."""
+
+    def test_usuario_con_password_antigua_puede_entrar(self):
+        User.objects.create_user(username="antiguo", password="clave-de-prueba")
+        self.assertTrue(
+            self.client.login(username="antiguo", password="clave-de-prueba")
+        )

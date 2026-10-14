@@ -31,18 +31,22 @@
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.first_name.id_for_label }}">Nombre</label>
                                 {{ form.first_name }}
+                                {% for error in form.first_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.last_name.id_for_label }}">Apellido</label>
                                 {{ form.last_name }}
+                                {% for error in form.last_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.email.id_for_label }}">Correo</label>
                                 {{ form.email }}
+                                {% for error in form.email.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label" for="{{ form.telefono.id_for_label }}">Teléfono</label>
                                 {{ form.telefono }}
+                                {% for error in form.telefono.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Usuario</label>
