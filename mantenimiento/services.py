@@ -31,18 +31,23 @@ def _ticket_preventivo_abierto(plan):
 
 
 @transaction.atomic
-def generar_tickets_preventivos(usuario=None, limite=None):
+def generar_tickets_preventivos(usuario=None, limite=None, sucursales=None):
     """Genera tickets PREVENTIVO para los planes cuya fecha de ejecución venció.
 
     Reposiciona primero la agenda a hoy (sin desbordar por atrasos largos) y
     genera un único ticket por plan y ciclo, salvo que ya exista un preventivo
     abierto del mismo plan. Devuelve la cantidad de tickets generados.
+
+    `sucursales` acota la generación a determinadas sucursales, para que un
+    usuario acotado a las suyas no termine creando preventivos ajenos.
     """
     ahora = timezone.now()
     generados = 0
     planes = PlanMantenimiento.objects.filter(
         activo=True, fecha_proxima__lte=ahora
     ).select_related("sucursal__empresa", "categoria")
+    if sucursales is not None:
+        planes = planes.filter(sucursal__in=sucursales)
     if limite:
         planes = planes[:limite]
 

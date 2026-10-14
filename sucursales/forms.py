@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 
-from accounts.models import Usuario
+from accounts.roles import ROLES_ENCARGADOS
 
 from .models import Sucursal
 
@@ -20,12 +20,7 @@ class SucursalForm(forms.ModelForm):
             self.fields["encargados"].queryset = (
                 User.objects.filter(
                     perfil__empresa=self._empresa,
-                    perfil__rol__in=[
-                        Usuario.Rol.ADMIN,
-                        Usuario.Rol.GESTOR,
-                        Usuario.Rol.ENCARGADO,
-                        Usuario.Rol.GERENCIA,
-                    ],
+                    perfil__rol__in=ROLES_ENCARGADOS,
                 )
                 .select_related("perfil")
                 .order_by("username")
@@ -79,12 +74,7 @@ class SucursalForm(forms.ModelForm):
         if self._empresa:
             invalidos = encargados.exclude(
                 perfil__empresa=self._empresa,
-                perfil__rol__in=[
-                    Usuario.Rol.ADMIN,
-                    Usuario.Rol.GESTOR,
-                    Usuario.Rol.ENCARGADO,
-                    Usuario.Rol.GERENCIA,
-                ],
+                perfil__rol__in=ROLES_ENCARGADOS,
             )
             if invalidos.exists():
                 raise forms.ValidationError(

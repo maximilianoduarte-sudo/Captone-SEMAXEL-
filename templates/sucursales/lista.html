@@ -15,9 +15,11 @@
             <h4 class="mb-0">Sucursales</h4>
             <span class="text-muted">{{ sucursales|length }} sucursales</span>
         </div>
+        {% if rol == "ADMIN" or rol == "GESTOR" or es_superuser %}
         <a href="{% url 'sucursales:crear' %}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Nueva sucursal
         </a>
+        {% endif %}
     </div>
 
     <div class="card">
@@ -45,7 +47,9 @@
                         </td>
                         <td class="text-end">
                             <a href="{% url 'sucursales:detalle' s.id %}" class="btn btn-sm btn-outline-secondary btn-action"><i class="bi bi-eye"></i></a>
+                            {% if rol == "ADMIN" or rol == "GESTOR" or es_superuser %}
                             <a href="{% url 'sucursales:editar' s.id %}" class="btn btn-sm btn-outline-primary btn-action"><i class="bi bi-pencil"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

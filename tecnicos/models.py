@@ -43,6 +43,9 @@ class Tecnico(models.Model):
     documento = models.CharField(
         "Documento de identificación",
         max_length=30,
+        # null=True y no solo blank: con unique=True, dos técnicos sin
+        # documento colisionarían al guardar "" (cadena vacía).
+        null=True,
         blank=True,
         unique=True,
     )

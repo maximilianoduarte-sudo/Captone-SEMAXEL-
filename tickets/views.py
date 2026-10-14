@@ -7,7 +7,14 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import Usuario
-from accounts.roles import puede_ver_ticket, rol_requerido, tickets_visibles
+from accounts.roles import (
+    ROLES_GESTIONAN_TICKETS,
+    puede_gestionar_ticket,
+    puede_ver_ticket,
+    rol_requerido,
+    tiene_rol,
+    tickets_visibles,
+)
 from ofertas.forms import OfertaForm
 from ofertas.models import OfertaTicket
 from tecnicos.models import Tecnico
@@ -43,6 +50,32 @@ def _registrar_historial(ticket, usuario, estado_anterior, estado_nuevo, comenta
         estado_nuevo=estado_nuevo,
         comentario=comentario,
     )
+
+
+ESTADOS_PUBLICABLES = (
+    Ticket.Estado.ABIERTO,
+    Ticket.Estado.EN_REVISION,
+    Ticket.Estado.PUBLICADO,
+)
+
+ESTADOS_TERMINALES = (
+    Ticket.Estado.RESUELTO,
+    Ticket.Estado.CERRADO,
+    Ticket.Estado.CANCELADO,
+)
+
+
+def puede_publicar_oferta(user, ticket):
+    """True si el usuario puede publicar o reactivar la oferta de este ticket.
+
+    Replica las mismas reglas que aplica la vista `publicar_oferta`, para que
+    el botón solo se muestre cuando la acción realmente va a funcionar.
+    """
+    if not tiene_rol(user, *ROLES_GESTIONAN_TICKETS):
+        return False
+    if not puede_ver_ticket(user, ticket):
+        return False
+    return ticket.estado in ESTADOS_PUBLICABLES
 
 
 @login_required
@@ -89,6 +122,7 @@ def lista(request):
         "estados": dict(Ticket.Estado.choices),
         "prioridades": dict(Ticket.Prioridad.choices),
         "categorias": Categoria.objects.filter(activo=True),
+        "puede_gestionar_tickets": tiene_rol(request.user, *ROLES_GESTIONAN_TICKETS),
     }
     return render(request, "tickets/lista.html", context)
 
@@ -111,12 +145,13 @@ def detalle(request, numero):
         ),
         "estados": dict(Ticket.Estado.choices),
         "prioridades": dict(Ticket.Prioridad.choices),
+        "puede_publicar_oferta": puede_publicar_oferta(request.user, ticket),
     }
     return render(request, "tickets/detalle.html", context)
 
 
 @login_required
-@rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO)
+@rol_requerido(*ROLES_GESTIONAN_TICKETS)
 def crear(request):
     """Formulario de creación de ticket (persistente, genera número e historial)."""
     form = TicketForm(request.POST or None, user=request.user)
@@ -147,37 +182,45 @@ def crear(request):
 
 
 @login_required
-@rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO)
+@rol_requerido(*ROLES_GESTIONAN_TICKETS)
 def publicar_oferta(request, numero):
     """Publica (o reactiva) la oferta asociada a un ticket."""
     ticket = get_object_or_404(Ticket, numero=numero)
     if not puede_ver_ticket(request.user, ticket):
         raise PermissionDenied
-    if not (ticket.estado in (Ticket.Estado.ABIERTO, Ticket.Estado.EN_REVISION, Ticket.Estado.PUBLICADO)):
+    if not (ticket.estado in ESTADOS_PUBLICABLES):
         messages.error(
             request,
             "No se puede publicar una oferta para un ticket en su estado actual.",
         )
         return redirect("tickets:detalle", numero=numero)
-    oferta, _ = OfertaTicket.objects.get_or_create(ticket=ticket)
-    form = OfertaForm(request.POST or None, instance=oferta)
 
-    if form.is_valid():
-        oferta = form.save(commit=False)
-        oferta.estado = OfertaTicket.Estado.DISPONIBLE
-        oferta.save()
-        if ticket.estado != Ticket.Estado.PUBLICADO:
-            _registrar_historial(
-                ticket,
-                request.user,
-                ticket.estado,
-                Ticket.Estado.PUBLICADO,
-                "Se publicó la oferta para técnicos.",
-            )
-            ticket.estado = Ticket.Estado.PUBLICADO
-            ticket.save()
-        messages.success(request, "Oferta publicada correctamente.")
-        return redirect("ofertas:detalle", oid=oferta.pk)
+    # La oferta solo se crea al confirmar el formulario: un simple GET no puede
+    # dejar publicada (y por lo tanto tomable) una oferta que nadie envió.
+    oferta = OfertaTicket.objects.filter(ticket=ticket).first()
+
+    if request.method == "POST":
+        form = OfertaForm(request.POST, instance=oferta)
+        if form.is_valid():
+            oferta = form.save(commit=False)
+            if oferta.ticket_id is None:
+                oferta.ticket = ticket
+            oferta.estado = OfertaTicket.Estado.DISPONIBLE
+            oferta.save()
+            if ticket.estado != Ticket.Estado.PUBLICADO:
+                _registrar_historial(
+                    ticket,
+                    request.user,
+                    ticket.estado,
+                    Ticket.Estado.PUBLICADO,
+                    "Se publicó la oferta para técnicos.",
+                )
+                ticket.estado = Ticket.Estado.PUBLICADO
+                ticket.save()
+            messages.success(request, "Oferta publicada correctamente.")
+            return redirect("ofertas:detalle", oid=oferta.pk)
+    else:
+        form = OfertaForm(instance=oferta)
 
     tecnicos_elegibles = Tecnico.objects.filter(estado=Tecnico.Estado.DISPONIBLE).select_related("usuario").prefetch_related("especialidades")[:5]
     context = {"ticket": ticket, "form": form, "tecnicos_elegibles": tecnicos_elegibles}
@@ -191,7 +234,7 @@ def publicar_oferta(request, numero):
 def cambiar_estado(request, numero):
     """Cambia el estado de un ticket y registra el cambio en el historial."""
     ticket = get_object_or_404(Ticket, numero=numero)
-    if not puede_ver_ticket(request.user, ticket):
+    if not puede_gestionar_ticket(request.user, ticket):
         raise PermissionDenied
     if request.method == "POST":
         estado_anterior = ticket.estado
@@ -201,14 +244,14 @@ def cambiar_estado(request, numero):
         if form.is_valid():
             estado_nuevo = form.cleaned_data["estado"]
             if estado_anterior != estado_nuevo:
+                # Al reabrir un ticket se limpia la fecha de cierre: si no, los
+                # reportes de cumplimiento SLA lo seguirían contando como cerrado.
+                ticket.fecha_cierre = (
+                    timezone.now()
+                    if estado_nuevo in ESTADOS_TERMINALES
+                    else None
+                )
                 form.save()
-                if estado_nuevo in (
-                    Ticket.Estado.RESUELTO,
-                    Ticket.Estado.CERRADO,
-                    Ticket.Estado.CANCELADO,
-                ):
-                    ticket.fecha_cierre = timezone.now()
-                    ticket.save(update_fields=["fecha_cierre"])
                 _registrar_historial(
                     ticket,
                     request.user,

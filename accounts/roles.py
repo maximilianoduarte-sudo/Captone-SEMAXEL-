@@ -5,6 +5,20 @@ from django.db.models import Q
 
 from .models import Usuario
 
+ROLES_ENCARGADOS = (
+    Usuario.Rol.ADMIN,
+    Usuario.Rol.GESTOR,
+    Usuario.Rol.ENCARGADO,
+    Usuario.Rol.GERENCIA,
+)
+
+# Roles que gestionan la incidencia: crean tickets y publican ofertas.
+ROLES_GESTIONAN_TICKETS = (
+    Usuario.Rol.ADMIN,
+    Usuario.Rol.GESTOR,
+    Usuario.Rol.ENCARGADO,
+)
+
 
 def rol_usuario(user):
     """Rol del usuario autenticado (o None si no tiene perfil)."""
@@ -48,6 +62,16 @@ def rol_requerido(*roles):
         return wrapper
 
     return decorador
+
+
+def tiene_rol(user, *roles):
+    """True si el usuario tiene alguno de los roles indicados (o es superusuario).
+
+    Permite que las vistas entreguen a las plantillas una bandera de capacidad
+    calculada con la misma lista de roles que protege la URL, en vez de repetir
+    la comparación de roles en el HTML.
+    """
+    return user.is_superuser or rol_usuario(user) in roles
 
 
 def sucursales_visibles(user):
@@ -127,6 +151,21 @@ def ordenes_visibles(user):
     return OrdenTrabajo.objects.none()
 
 
+def es_encargado_de(user, sucursal):
+    """True si un ENCARGADO tiene asignada esa sucursal dentro de su empresa.
+
+    La pertenencia a la empresa es obligatoria: aunque la asignación quedara
+    registrada en la base de datos, un ENCARGADO nunca opera sobre sucursales
+    de otra empresa.
+    """
+    if sucursal is None:
+        return False
+    return (
+        pertenece_a_empresa(user, sucursal.empresa_id)
+        and sucursal.encargados.filter(pk=user.pk).exists()
+    )
+
+
 def puede_ver_sucursal(user, sucursal):
     """Acceso a una sucursal según rol y empresa."""
     if user.is_superuser:
@@ -135,7 +174,7 @@ def puede_ver_sucursal(user, sucursal):
     if rol in (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.GERENCIA):
         return pertenece_a_empresa(user, sucursal.empresa_id)
     if rol == Usuario.Rol.ENCARGADO:
-        return sucursal.encargados.filter(pk=user.pk).exists()
+        return es_encargado_de(user, sucursal)
     return False
 
 
@@ -154,7 +193,7 @@ def puede_ver_ticket(user, ticket):
     if rol in (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.GERENCIA):
         return pertenece_a_empresa(user, ticket.sucursal.empresa_id)
     if rol == Usuario.Rol.ENCARGADO:
-        return ticket.sucursal.encargados.filter(pk=user.pk).exists()
+        return es_encargado_de(user, ticket.sucursal)
     if rol == Usuario.Rol.TECNICO:
         from ofertas.models import OfertaTicket
         try:
@@ -168,6 +207,30 @@ def puede_ver_ticket(user, ticket):
             ticket=ticket, tecnico__usuario=user
         ).exists()
     return False
+
+
+def puede_gestionar_ticket(user, ticket):
+    """True si el usuario puede cambiar el estado de un ticket.
+
+    `puede_ver_ticket` es un chequeo de LECTURA: le abre el marketplace al
+    técnico que ve una oferta publicada, aunque no la haya tomado. Cambiar el
+    estado es una ESCRITURA, así que necesita su propia autorización:
+
+    - Los roles de empresa gestionan los tickets de su alcance, igual que
+      pueden verlos.
+    - El técnico solo los que tiene asignados en una orden de trabajo viva. Ver
+      una oferta en el marketplace NO le da permiso para cambiar el estado.
+    """
+    if user.is_superuser:
+        return True
+    if rol_usuario(user) != Usuario.Rol.TECNICO:
+        return puede_ver_ticket(user, ticket)
+
+    from tickets.models import OrdenTrabajo
+
+    return OrdenTrabajo.objects.filter(
+        ticket=ticket, tecnico__usuario=user
+    ).exclude(estado=OrdenTrabajo.Estado.CANCELADA).exists()
 
 
 def puede_ver_oferta(user, oferta):
@@ -184,7 +247,7 @@ def puede_ver_oferta(user, oferta):
     if rol in (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.GERENCIA):
         return pertenece_a_empresa(user, oferta.ticket.sucursal.empresa_id)
     if rol == Usuario.Rol.ENCARGADO:
-        return oferta.ticket.sucursal.encargados.filter(pk=user.pk).exists()
+        return es_encargado_de(user, oferta.ticket.sucursal)
     if rol == Usuario.Rol.TECNICO:
         from ofertas.models import OfertaTicket
         if oferta.estado == OfertaTicket.Estado.DISPONIBLE:

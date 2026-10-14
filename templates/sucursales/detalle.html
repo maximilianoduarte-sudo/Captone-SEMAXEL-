@@ -20,7 +20,9 @@
             <span class="badge bg-secondary pill mt-1">Inactiva</span>
             {% endif %}
         </div>
+        {% if rol == "ADMIN" or rol == "GESTOR" or es_superuser %}
         <a href="{% url 'sucursales:editar' sucursal.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i> Editar</a>
+        {% endif %}
     </div>
 
     <div class="row g-3">

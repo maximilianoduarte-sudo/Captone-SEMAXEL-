@@ -11,8 +11,15 @@
 
 {% block content %}
 <div class="container-fluid px-0">
-    <h4 class="mb-1">Técnicos</h4>
-    <span class="text-muted d-block mb-4">Especialidades, disponibilidad y rendimiento</span>
+    <div class="d-flex justify-content-between align-items-start mb-1">
+        <div>
+            <h4 class="mb-1">Técnicos</h4>
+            <span class="text-muted d-block mb-4">Especialidades, disponibilidad y rendimiento</span>
+        </div>
+        {% if es_superuser %}
+        <a href="{% url 'tecnicos:crear' %}" class="btn btn-sm btn-primary"><i class="bi bi-person-plus me-1"></i>Nuevo técnico</a>
+        {% endif %}
+    </div>
 
     <div class="mb-3">
         <div class="btn-group">

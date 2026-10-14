@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from django.core.exceptions import PermissionDenied
 from django.core.paginator import Paginator
-from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 
@@ -86,14 +85,15 @@ def perfil(request):
 
 
 def _usuarios_visibles(user):
-    """Usuarios según el rol: superuser ve todos; el resto ve su empresa y técnicos."""
+    """Usuarios según el rol: superuser ve todos; el resto, los de su empresa.
+
+    Los usuarios sin empresa (los técnicos del marketplace) quedan fuera: su
+    administración es del superusuario, no de un ADMIN de empresa.
+    """
     qs = User.objects.select_related("perfil").order_by("username")
     if user.is_superuser:
         return qs
-    empresas = empresas_visibles(user)
-    return qs.filter(
-        Q(perfil__empresa__in=empresas) | Q(perfil__empresa__isnull=True)
-    )
+    return qs.filter(perfil__empresa__in=empresas_visibles(user))
 
 
 @login_required
@@ -133,10 +133,16 @@ def usuario_editar(request, pk):
     if not request.user.is_superuser:
         perfil_existente = getattr(user, "perfil", None)
         visibles = empresas_visibles(request.user)
+        # Un ADMIN solo administra usuarios de su empresa. Los técnicos no
+        # pertenecen a ninguna (son un recurso global del marketplace), así que
+        # editar sus cuentas queda reservado al superusuario: de lo contrario
+        # un ADMIN podría resetear su contraseña y cambiarle el rol.
         permite = (
             perfil_existente is None
-            or perfil_existente.empresa_id is None
-            or visibles.filter(pk=perfil_existente.empresa_id).exists()
+            or (
+                perfil_existente.empresa_id is not None
+                and visibles.filter(pk=perfil_existente.empresa_id).exists()
+            )
         )
         if not permite:
             raise PermissionDenied

@@ -6,7 +6,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.models import Usuario
-from accounts.roles import ordenes_visibles, pertenece_a_empresa, rol_usuario, sucursales_visibles
+from accounts.roles import (
+    es_encargado_de,
+    ordenes_visibles,
+    pertenece_a_empresa,
+    rol_usuario,
+)
 from tecnicos.models import Tecnico
 
 from .forms import CambioEstadoOrdenForm
@@ -240,5 +245,5 @@ def _acceso_orden(user, orden):
     if rol == Usuario.Rol.TECNICO:
         return orden.tecnico.usuario == user
     if rol == Usuario.Rol.ENCARGADO:
-        return orden.ticket.sucursal in list(sucursales_visibles(user))
+        return es_encargado_de(user, orden.ticket.sucursal)
     return False

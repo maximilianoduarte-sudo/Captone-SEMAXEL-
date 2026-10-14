@@ -20,7 +20,9 @@
                 <small class="text-muted">{{ tecnico.especialidades|join:" · " }}</small>
             </div>
         </div>
+        {% if es_superuser %}
         <a href="{% url 'tecnicos:editar' tecnico.id %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i> Editar</a>
+        {% endif %}
     </div>
 
     <div class="row g-3">

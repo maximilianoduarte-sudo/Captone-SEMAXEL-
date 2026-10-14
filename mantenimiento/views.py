@@ -5,7 +5,12 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from accounts.models import Usuario
-from accounts.roles import puede_ver_sucursal, rol_requerido, sucursales_visibles
+from accounts.roles import (
+    puede_ver_sucursal,
+    rol_requerido,
+    rol_usuario,
+    sucursales_visibles,
+)
 
 from .forms import PlanMantenimientoForm
 from .models import PlanMantenimiento
@@ -18,11 +23,25 @@ ROL_PLANES = (
     Usuario.Rol.GERENCIA,
 )
 
+ROLES_EDITAN_PLANES = (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR)
+
 
 def _planes_visibles(user):
     return PlanMantenimiento.objects.filter(
         sucursal__in=sucursales_visibles(user)
     ).select_related("sucursal__empresa", "categoria")
+
+
+def _generar_preventivos(user):
+    """Genera los preventivos vencidos que le corresponde operar al usuario.
+
+    Solo el ENCARGADO queda acotado a sus sucursales: los demás roles mantienen
+    el alcance global que ya tenían.
+    """
+    sucursales = None
+    if not user.is_superuser and rol_usuario(user) == Usuario.Rol.ENCARGADO:
+        sucursales = sucursales_visibles(user)
+    return generar_tickets_preventivos(usuario=user, sucursales=sucursales)
 
 
 @login_required
@@ -31,7 +50,7 @@ def lista(request):
     """Listado de planes de mantenimiento. Al abrirlo, genera los preventivos vencidos."""
     generados = 0
     if request.method == "POST":
-        generados = generar_tickets_preventivos(usuario=request.user)
+        generados = _generar_preventivos(request.user)
         if generados:
             messages.success(
                 request, f"Se generaron {generados} ticket(s) preventivo(s) automáticamente."
@@ -45,7 +64,7 @@ def lista(request):
         "planes": planes,
         "generados": generados,
         "puede_editar": request.user.is_superuser
-        or request.user.perfil.rol in (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR),
+        or rol_usuario(request.user) in ROLES_EDITAN_PLANES,
     }
     return render(request, "mantenimiento/lista.html", context)
 
@@ -63,7 +82,7 @@ def detalle(request, pk):
         "plan": plan,
         "programaciones": plan.programaciones.select_related("ticket")[:20],
         "puede_editar": request.user.is_superuser
-        or request.user.perfil.rol in (Usuario.Rol.ADMIN, Usuario.Rol.GESTOR),
+        or rol_usuario(request.user) in ROLES_EDITAN_PLANES,
     }
     return render(request, "mantenimiento/detalle.html", context)
 
@@ -101,7 +120,7 @@ def editar(request, pk):
 @rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR)
 def generar(request):
     """Genera ahora los tickets preventivos vencidos (acción manual)."""
-    generados = generar_tickets_preventivos(usuario=request.user)
+    generados = _generar_preventivos(request.user)
     if generados:
         messages.success(
             request, f"Se generaron {generados} ticket(s) preventivo(s) automáticamente."

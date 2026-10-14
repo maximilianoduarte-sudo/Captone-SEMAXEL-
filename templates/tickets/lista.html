@@ -16,9 +16,11 @@
             <h4 class="mb-0">Tickets</h4>
             <span class="text-muted">{{ tickets|length }} incidencias</span>
         </div>
+        {% if puede_gestionar_tickets %}
         <a href="{% url 'tickets:crear' %}" class="btn btn-primary">
             <i class="bi bi-plus-lg me-1"></i> Nuevo ticket
         </a>
+        {% endif %}
     </div>
 
     <!-- Filtros -->
@@ -89,7 +91,9 @@
                         <td class="text-muted small">{{ t.fecha }}</td>
                         <td class="text-end">
                             <a href="{% url 'tickets:detalle' t.numero %}" class="btn btn-sm btn-outline-secondary btn-action" title="Ver detalle"><i class="bi bi-eye"></i></a>
+                            {% if puede_gestionar_tickets %}
                             <a href="{% url 'tickets:publicar_oferta' t.numero %}" class="btn btn-sm btn-outline-primary btn-action" title="Publicar oferta"><i class="bi bi-briefcase"></i></a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}

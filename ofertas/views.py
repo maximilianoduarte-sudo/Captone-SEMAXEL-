@@ -66,7 +66,10 @@ def tomar(request, oid):
     administra pero no las toma (el superusuario queda habilitado por
     convención del sistema de permisos).
     """
-    oferta = get_object_or_404(OfertaTicket, pk=oid)
+    oferta = get_object_or_404(
+        OfertaTicket.objects.select_related("ticket__categoria__especialidad"),
+        pk=oid,
+    )
 
     if not puede_ver_oferta(request.user, oferta):
         raise PermissionDenied
@@ -95,6 +98,25 @@ def tomar(request, oid):
     if not ticket.puede_transicionar_a(Ticket.Estado.EN_EJECUCION):
         messages.warning(request, "El ticket ya no permite tomar la oferta.")
         return redirect("ofertas:disponibles")
+
+    # La categoría del ticket debe definir una especialidad: sin ella no hay
+    # forma de verificar la idoneidad del técnico que toma el trabajo.
+    especialidad = ticket.categoria.especialidad_id
+    if especialidad is None:
+        messages.warning(
+            request,
+            "La categoría del ticket no tiene especialidad definida. "
+            "Contacta a un administrador para que la configure antes de tomar la oferta.",
+        )
+        return redirect("ofertas:detalle", oid=oferta.pk)
+
+    if not tecnico.especialidades.filter(pk=especialidad).exists():
+        messages.warning(
+            request,
+            "Esta oferta requiere la especialidad "
+            f"“{ticket.categoria.especialidad.nombre}”, que no está en tu perfil.",
+        )
+        return redirect("ofertas:detalle", oid=oferta.pk)
 
     oferta.tecnico = tecnico
     oferta.estado = OfertaTicket.Estado.TOMADA
