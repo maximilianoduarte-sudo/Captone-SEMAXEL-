@@ -1248,6 +1248,138 @@ class MiPerfilValidacionTests(TestCase):
         self.assertIn("telefono", form.errors)
 
 
+class DisponibilidadTecnicoPerfilTests(TestCase):
+    """El técnico gestiona su propia disponibilidad desde su perfil.
+
+    Reglas verificadas:
+    - Un técnico nuevo parte en estado Disponible.
+    - Puede fijar Disponible / No disponible y persiste tras reingresar.
+    - No puede tocar la disponibilidad de otros técnicos.
+    - No puede cambiar su rol (campo visible pero de solo lectura).
+    - No puede fijar estados administrativos/operativos (OCUPADO, INACTIVO).
+    """
+
+    def setUp(self):
+        self.tecnico_user = User.objects.create_user(
+            username="tec_perfil", password="clave-de-prueba"
+        )
+        Usuario.objects.create(
+            user=self.tecnico_user, rol=Usuario.Rol.TECNICO, empresa=None
+        )
+        self.tecnico = Tecnico.objects.create(
+            usuario=self.tecnico_user, estado=Tecnico.Estado.DISPONIBLE
+        )
+
+        self.otro_user = User.objects.create_user(
+            username="tec_ajeno", password="clave-de-prueba"
+        )
+        Usuario.objects.create(user=self.otro_user, rol=Usuario.Rol.TECNICO, empresa=None)
+        self.otro_tecnico = Tecnico.objects.create(
+            usuario=self.otro_user, estado=Tecnico.Estado.DISPONIBLE
+        )
+
+    def _datos_perfil(self, **extra):
+        datos = {
+            "first_name": "Ana",
+            "last_name": "Torres",
+            "email": "ana@example.com",
+            "telefono": "+56 9 1234 5678",
+        }
+        datos.update(extra)
+        return datos
+
+    def test_nuevo_tecnico_queda_disponible_por_defecto(self):
+        user = User.objects.create_user(username="nuevo_tec", password="clave-de-prueba")
+        tecnico = Tecnico.objects.create(usuario=user)
+        self.assertEqual(tecnico.estado, Tecnico.Estado.DISPONIBLE)
+
+    def test_tecnico_cambia_su_disponibilidad_y_persiste(self):
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+
+        respuesta = self.client.post(
+            reverse("perfil"),
+            self._datos_perfil(disponibilidad=Tecnico.Estado.NO_DISPONIBLE),
+        )
+        self.assertEqual(respuesta.status_code, 302)
+        self.tecnico.refresh_from_db()
+        self.assertEqual(self.tecnico.estado, Tecnico.Estado.NO_DISPONIBLE)
+
+        # Persiste al cerrar sesión y volver a ingresar.
+        self.client.logout()
+        self.assertTrue(
+            self.client.login(username="tec_perfil", password="clave-de-prueba")
+        )
+        self.tecnico.refresh_from_db()
+        self.assertEqual(self.tecnico.estado, Tecnico.Estado.NO_DISPONIBLE)
+
+    def test_tecnico_no_modifica_la_disponibilidad_de_otro(self):
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+        self.client.post(
+            reverse("perfil"),
+            self._datos_perfil(disponibilidad=Tecnico.Estado.NO_DISPONIBLE),
+        )
+        self.otro_tecnico.refresh_from_db()
+        self.assertEqual(self.otro_tecnico.estado, Tecnico.Estado.DISPONIBLE)
+
+    def test_tecnico_no_puede_cambiar_su_rol(self):
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+        self.client.post(
+            reverse("perfil"),
+            self._datos_perfil(rol=Usuario.Rol.ADMIN),
+        )
+        self.tecnico_user.perfil.refresh_from_db()
+        self.assertEqual(self.tecnico_user.perfil.rol, Usuario.Rol.TECNICO)
+
+    def test_no_acepta_un_estado_no_administrable(self):
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+        respuesta = self.client.post(
+            reverse("perfil"),
+            self._datos_perfil(disponibilidad=Tecnico.Estado.OCUPADO),
+        )
+        self.assertEqual(respuesta.status_code, 200)
+        self.tecnico.refresh_from_db()
+        self.assertEqual(self.tecnico.estado, Tecnico.Estado.DISPONIBLE)
+
+    def test_estado_inactivo_no_es_editable_por_el_tecnico(self):
+        self.tecnico.estado = Tecnico.Estado.INACTIVO
+        self.tecnico.save(update_fields=["estado"])
+
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+        self.client.post(
+            reverse("perfil"),
+            self._datos_perfil(disponibilidad=Tecnico.Estado.DISPONIBLE),
+        )
+        self.tecnico.refresh_from_db()
+        self.assertEqual(self.tecnico.estado, Tecnico.Estado.INACTIVO)
+
+    def test_formulario_sin_disponibilidad_para_no_tecnico(self):
+        user = User.objects.create_user(username="solo_enc", password="clave-de-prueba")
+        Usuario.objects.create(user=user, rol=Usuario.Rol.ENCARGADO)
+        form = MiPerfilForm(instance=user)
+        self.assertNotIn("disponibilidad", form.fields)
+
+    def test_perfil_muestra_las_especialidades_del_tecnico(self):
+        especialidad = Especialidad.objects.create(nombre="Electricidad")
+        self.tecnico.especialidades.add(especialidad)
+
+        self.client.login(username="tec_perfil", password="clave-de-prueba")
+        contenido = self.client.get(reverse("perfil")).content.decode()
+
+        self.assertIn("Especialidades", contenido)
+        self.assertIn("Electricidad", contenido)
+
+    def test_perfil_no_muestra_especialidades_a_no_tecnicos(self):
+        user = User.objects.create_user(
+            username="enc_perfil", password="clave-de-prueba"
+        )
+        Usuario.objects.create(user=user, rol=Usuario.Rol.ENCARGADO)
+
+        self.client.login(username="enc_perfil", password="clave-de-prueba")
+        contenido = self.client.get(reverse("perfil")).content.decode()
+
+        self.assertNotIn("Especialidades", contenido)
+
+
 class LoginPasswordExistenteTests(TestCase):
     """Las contraseñas ya existentes siguen sirviendo para iniciar sesión."""
 

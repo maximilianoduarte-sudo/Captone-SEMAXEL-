@@ -3,7 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 
 from empresas.models import Empresa
-from tecnicos.models import Especialidad
+from tecnicos.models import Especialidad, Tecnico
 
 from .models import Usuario
 from .validators import PASSWORD_HELP_TEXT, TelefonoField, validar_password
@@ -193,7 +193,12 @@ class UsuarioEditarForm(_UsuarioBaseForm):
 
 
 class MiPerfilForm(forms.ModelForm):
-    """El usuario autenticado actualiza sus propios datos básicos y teléfono."""
+    """El usuario autenticado actualiza sus propios datos básicos y teléfono.
+
+    Si el usuario es TÉCNICO también puede gestionar su propia disponibilidad
+    (Disponible / No disponible). El rol y los estados administrativos
+    (OCUPADO, INACTIVO) se muestran pero no se editan desde aquí.
+    """
 
     telefono = TelefonoField()
 
@@ -214,11 +219,50 @@ class MiPerfilForm(forms.ModelForm):
         if perfil:
             self.fields["telefono"].initial = perfil.telefono
 
+        self._tecnico = getattr(self.instance, "tecnico", None)
+        if self._tecnico is not None:
+            # Solo se exponen los estados que el técnico puede fijar por sí
+            # mismo; OCUPADO e INACTIVO quedan fuera de su alcance.
+            campo = forms.ChoiceField(
+                label="Disponibilidad",
+                choices=[
+                    (estado.value, estado.label)
+                    for estado in Tecnico.ESTADOS_DISPONIBILIDAD
+                ],
+                widget=forms.Select(attrs={"class": "form-select"}),
+            )
+            campo.initial = (
+                Tecnico.Estado.NO_DISPONIBLE
+                if self._tecnico.estado == Tecnico.Estado.NO_DISPONIBLE
+                else Tecnico.Estado.DISPONIBLE
+            )
+            if self._tecnico.estado == Tecnico.Estado.INACTIVO:
+                # Un técnico inactivo no puede reactivarse solo: es un estado
+                # administrativo.
+                campo.disabled = True
+                campo.help_text = (
+                    "Tu cuenta está inactiva; un administrador debe reactivarla."
+                )
+            self.fields["disponibilidad"] = campo
+
     def save(self, commit=True):
         user = super().save(commit=commit)
         perfil, _ = Usuario.objects.get_or_create(user=user)
         perfil.telefono = self.cleaned_data.get("telefono") or None
         perfil.save()
+
+        tecnico = getattr(user, "tecnico", None)
+        disponibilidad = self.cleaned_data.get("disponibilidad")
+        if (
+            tecnico is not None
+            and disponibilidad
+            and tecnico.estado != Tecnico.Estado.INACTIVO
+            and tecnico.estado != disponibilidad
+        ):
+            # Se actualiza únicamente el técnico de la propia sesión: el
+            # formulario trabaja sobre `request.user`, nunca sobre otro.
+            tecnico.estado = disponibilidad
+            tecnico.save(update_fields=["estado", "fecha_actualizacion"])
         return user
 
 

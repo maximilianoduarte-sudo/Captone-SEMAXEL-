@@ -48,6 +48,14 @@
                                 {{ form.telefono }}
                                 {% for error in form.telefono.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
                             </div>
+                            {% if form.disponibilidad %}
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.disponibilidad.id_for_label }}">Disponibilidad</label>
+                                {{ form.disponibilidad }}
+                                {% if form.disponibilidad.help_text %}<div class="form-text">{{ form.disponibilidad.help_text }}</div>{% endif %}
+                                {% for error in form.disponibilidad.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+                            </div>
+                            {% endif %}
                             <div class="col-md-6">
                                 <label class="form-label">Usuario</label>
                                 <input type="text" class="form-control" value="{{ user.username }}" disabled>
@@ -56,6 +64,14 @@
                                 <label class="form-label">Rol</label>
                                 <input type="text" class="form-control" value="{% if user.perfil %}{{ user.perfil.get_rol_display }}{% else %}Usuario{% endif %}" disabled>
                             </div>
+                            {% if user.tecnico %}
+                            <div class="col-12">
+                                <label class="form-label">Especialidades</label>
+                                <div>
+                                    {% include 'includes/especialidades.html' with especialidades=user.tecnico.especialidades.all %}
+                                </div>
+                            </div>
+                            {% endif %}
                         </div>
                         {% if form.errors %}
                             {% for error in form.non_field_errors %}<div class="text-danger small mt-2">{{ error }}</div>{% endfor %}

@@ -33,6 +33,12 @@ class Tecnico(models.Model):
         NO_DISPONIBLE = "NO_DISPONIBLE", "No disponible"
         INACTIVO = "INACTIVO", "Inactivo"
 
+    # Estados de disponibilidad que el propio técnico puede gestionar desde su
+    # perfil. OCUPADO (operativo: lo fija el sistema al tomar una oferta) e
+    # INACTIVO (administrativo: solo lo fija un administrador) no son editables
+    # por el técnico.
+    ESTADOS_DISPONIBILIDAD = (Estado.DISPONIBLE, Estado.NO_DISPONIBLE)
+
     usuario = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -64,7 +70,10 @@ class Tecnico(models.Model):
         "Estado / Disponibilidad",
         max_length=20,
         choices=Estado.choices,
-        default=Estado.NO_DISPONIBLE,
+        # Valor inicial explícito y coherente para un técnico nuevo. Antes era
+        # NO_DISPONIBLE, lo que dejaba a los técnicos recién creados sin poder
+        # recibir ofertas hasta cambiarlo a mano.
+        default=Estado.DISPONIBLE,
     )
     fecha_registro = models.DateTimeField("Fecha de registro", auto_now_add=True)
     fecha_actualizacion = models.DateTimeField("Fecha de actualización", auto_now=True)
