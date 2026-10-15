@@ -21,14 +21,23 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
+                            {% if not ocultar_numero %}
                             <span class="text-muted small">{{ o.ticket.numero }}</span>
+                            {% endif %}
                             <h5 class="mb-0">{{ o.titulo }}</h5>
+                            {% if ocultar_numero %}
+                            <div class="text-muted small mt-1">
+                                <i class="bi bi-building me-1"></i>{{ o.empresa.nombre }}{% if o.sucursal %} · {{ o.sucursal }}{% endif %}
+                            </div>
+                            {% endif %}
                         </div>
                         <span class="badge pill pr-{{ o.prioridad }}">{{ o.prioridad|prioridad_label }}</span>
                     </div>
                     <div class="text-muted small mb-2">
-                        <div><i class="bi bi-building me-1"></i><span class="badge bg-light text-dark border me-1">{{ o.sucursal.empresa.codigo }}</span>Sucursal: {{ o.sucursal }}</div>
+                        <div><i class="bi bi-building me-1"></i>{% if not ocultar_numero %}<span class="badge bg-light text-dark border me-1">{{ o.sucursal.empresa.codigo }}</span>{% endif %}<strong>{{ o.empresa.nombre }}</strong> · Sucursal: {{ o.sucursal }}</div>
+                        <div><i class="bi bi-geo-alt me-1"></i>{{ o.direccion }}{% if o.comuna %}, {{ o.comuna }}{% endif %}{% if o.ciudad %}, {{ o.ciudad }}{% endif %}</div>
                         <div><i class="bi bi-tag me-1"></i>Categoría: {{ o.categoria }}</div>
+                        {% if o.encargado_sucursal %}<div><i class="bi bi-person me-1"></i>Encargado: {{ o.encargado_sucursal }}</div>{% endif %}
                     </div>
                     <div class="d-flex align-items-center text-muted small mb-3">
                         <i class="bi bi-clock me-1"></i> Publicado {{ o.publicacion }}

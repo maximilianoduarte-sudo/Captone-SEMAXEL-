@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% load demo_extras %}
 
-{% block title %}Oferta {{ oferta.ticket }} | SEMAXEL{% endblock %}
+{% block title %}Oferta {% if not ocultar_numero %}{{ oferta.ticket }}{% else %}{{ oferta.titulo }}{% endif %} | SEMAXEL{% endblock %}
 
 {% block active_ofertas %}active{% endblock %}
 
 {% block breadcrumbs_items %}
 <li class="breadcrumb-item"><a href="{% url 'ofertas:disponibles' %}">Ofertas</a></li>
-<li class="breadcrumb-item active" aria-current="page">{{ oferta.ticket }}</li>
+<li class="breadcrumb-item active" aria-current="page">{% if not ocultar_numero %}{{ oferta.ticket }}{% else %}{{ oferta.titulo }}{% endif %}</li>
 {% endblock %}
 
 {% block content %}
@@ -15,14 +15,14 @@
     {% if tomada %}
     <div class="alert alert-success d-flex align-items-center gap-2">
         <i class="bi bi-check-circle-fill"></i>
-        <div><strong>¡Oferta tomada!</strong> La oferta {{ oferta.ticket.numero }} ha sido asignada a tu usuario.</div>
+        <div><strong>¡Oferta tomada!</strong> {% if not ocultar_numero %}La oferta {{ oferta.ticket.numero }} ha sido asignada a tu usuario.{% else %}La oferta ha sido asignada a tu usuario.{% endif %}</div>
     </div>
     {% endif %}
 
     <div class="d-flex flex-wrap justify-content-between align-items-start mb-4 gap-2">
         <div>
             <div class="text-muted">Oferta de trabajo</div>
-            <h3 class="mb-0">{{ oferta.ticket.numero }} · {{ oferta.titulo }}</h3>
+            <h3 class="mb-0">{% if not ocultar_numero %}{{ oferta.ticket.numero }} · {% endif %}{{ oferta.titulo }}</h3>
             <span class="badge pill bg-{{ oferta.estado }} mt-2">{{ oferta.estado|estado_label }}</span>
         </div>
         {% if rol == "TECNICO" or es_superuser %}
@@ -38,14 +38,38 @@
                 <div class="card-header bg-white"><strong>Información del trabajo</strong></div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="text-muted small">Sucursal</div>
-                            <strong>{{ oferta.sucursal }}</strong>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="text-muted small">Dirección</div>
-                            <strong>{{ oferta.direccion }}</strong>
-                        </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Empresa</div>
+                                <strong>{{ oferta.empresa.nombre }}</strong>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Sucursal</div>
+                                <strong>{{ oferta.sucursal }}</strong>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Código empresa</div>
+                                <span class="badge bg-light text-dark border">{{ oferta.empresa.codigo }}</span>
+                            </div>
+                            <div class="col-12">
+                                <div class="text-muted small">Dirección</div>
+                                <strong>{{ oferta.direccion }}{% if oferta.comuna %}, {{ oferta.comuna }}{% endif %}{% if oferta.ciudad %}, {{ oferta.ciudad }}{% endif %}{% if oferta.region %}, {{ oferta.region }}{% endif %}</strong>
+                            </div>
+                            {% if oferta.telefono_sucursal or oferta.correo_sucursal %}
+                            <div class="col-md-6">
+                                <div class="text-muted small">Teléfono sucursal</div>
+                                <strong>{{ oferta.telefono_sucursal|default:"—" }}</strong>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted small">Correo sucursal</div>
+                                <strong>{{ oferta.correo_sucursal|default:"—" }}</strong>
+                            </div>
+                            {% endif %}
+                            {% if oferta.encargado_sucursal %}
+                            <div class="col-md-6">
+                                <div class="text-muted small">Encargado de sucursal</div>
+                                <strong>{{ oferta.encargado_sucursal }}</strong>
+                            </div>
+                            {% endif %}
                         <div class="col-md-4">
                             <div class="text-muted small">Categoría</div>
                             <strong>{{ oferta.categoria }}</strong>
@@ -104,7 +128,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <p>¿Estás seguro de que deseas tomar la oferta <strong>{{ oferta.ticket.numero }} - {{ oferta.titulo }}</strong>?</p>
+                <p>¿Estás seguro de que deseas tomar la oferta <strong>{% if not ocultar_numero %}{{ oferta.ticket.numero }} - {% endif %}{{ oferta.titulo }}</strong>?</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

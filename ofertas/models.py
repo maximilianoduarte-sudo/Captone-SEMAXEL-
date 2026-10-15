@@ -77,12 +77,40 @@ class OfertaTicket(models.Model):
         return self.ticket.titulo
 
     @property
+    def empresa(self):
+        return self.ticket.sucursal.empresa
+
+    @property
     def sucursal(self):
         return self.ticket.sucursal.nombre
 
     @property
     def direccion(self):
         return self.ticket.sucursal.direccion
+
+    @property
+    def comuna(self):
+        return self.ticket.sucursal.comuna
+
+    @property
+    def ciudad(self):
+        return self.ticket.sucursal.ciudad
+
+    @property
+    def region(self):
+        return self.ticket.sucursal.region
+
+    @property
+    def telefono_sucursal(self):
+        return self.ticket.sucursal.telefono
+
+    @property
+    def correo_sucursal(self):
+        return self.ticket.sucursal.correo
+
+    @property
+    def encargado_sucursal(self):
+        return self.ticket.sucursal.encargado
 
     @property
     def categoria(self):
