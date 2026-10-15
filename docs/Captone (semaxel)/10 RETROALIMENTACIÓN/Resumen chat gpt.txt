@@ -1,0 +1,36 @@
+📌 Resumen General de la RetroalimentaciónEl evaluador destaca que el proyecto SEMAXEL Ops aborda una problemática válida para un Capstone y cuenta con una propuesta de solución concreta. Sin embargo, la presentación actual es demasiado general e "ideológica".
+
+ Debe evolucionar hacia una propuesta técnica rigurosa que demuestre coherencia entre la evidencia del problema, los usuarios, el alcance (MVP), los requisitos, la metodología de desarrollo, la arquitectura y los planes de pruebas.  
+ 
+ Las 5 preguntas fundamentales que el proyecto debe responder con claridad son:
+    ¿Qué problema real están resolviendo?   
+    ¿Cómo comprobaron que existe? (Evidencia)   
+    ¿Qué van a desarrollar exactamente? (MVP)   
+    ¿Cómo lo van a desarrollar y validar? (Metodología y QA)   
+    ¿Cómo demostrarán que cumple con lo solicitado?   
+    
+    🚨 Puntos Más Críticos a Solucionar (Prioridades)
+
+    1. Validación de la Problemática y Evidencia 
+    Falta de evidencia concreta: Indicar claramente quién es la contraparte o cliente real, cómo se levantó la información y adjuntar evidencia tangible (entrevistas, reuniones, procesos actuales, minutas).   Eliminar afirmaciones absolutas no respaldadas: Evitar frases como "nulo control", "altos costos" o "la falta de mantenimiento destruye el valor de las empresas" si no existen métricas, fuentes o datos del cliente que las respalden.   
+    
+    2. Definición de Usuarios, Permisos y Reglas de Negocio 
+    Matriz de Usuarios y Permisos: Detallar explícitamente qué acciones puede realizar cada rol (Encargado de Local, Técnico de Terreno, Gerencia) en términos de registrar, consultar, modificar, aprobar, asignar o cerrar.   Reglas de Negocio y SLA: Definir formalmente el flujo (ej. quién convierte una incidencia en OT, cómo se asigna el técnico, cómo se calcula exactamente el SLA y qué pasa si se incumple).   
+    
+    3. Delimitación del Alcance del MVP
+    Delimitar el MVP: Definir de forma estricta qué funcionalidades van a ser implementadas y probadas en el proyecto y cuáles quedan explícitamente fuera de alcance para futuras versiones.   Reformular metas/objetivos: Cambiar afirmaciones como "garantizar cumplimiento del 100%" o "transformará un gasto incontrolable" por objetivos realistas y resultados esperados medibles.   
+    
+    4. Requisitos Formales del Sistema
+    Catálogo de Requisitos Funcionales (RF) y No Funcionales (RNF): Listar y codificar formalmente los requisitos (ej. RF01, RF02, etc.).   Incluir RNF clave: Seguridad, rendimiento, disponibilidad, usabilidad, trazabilidad y respaldo.   
+    
+    5. Inconsistencia en la Planificación y Metodología Scrum
+    Incoherencia de tiempos: La planificación habla de 4 meses (16 semanas), pero indican 4 Sprints de 2 semanas (8 semanas). Hay que transparentar qué se hace en las 8 semanas restantes (levantamiento, diseño, QA, documentación, despliegue).   Scrum Real: Presentar el Product Backlog, historias de usuario con Criterios de Aceptación, Definición de Terminado (Definition of Done) y capturas de la herramienta de gestión.   Carta Gantt detallada: Desglosar la Gantt más allá de las 3 grandes fases (mostrar actividades, fechas, hitos, dependencias y responsables).   
+    
+    6. Arquitectura, Modelo de Datos y Redes de Definición
+    Diagrama de Arquitectura: Dibujar un diagrama formal que muestre capas (Usuario $\rightarrow$ Interfaz/Frontend $\rightarrow$ Backend/Django $\rightarrow$ Base de Datos/MySQL y servicios adicionales).   Modelo de Datos ER: Presentar el modelo Entidad-Relación de MySQL coherente con las tablas definidas (usuarios, empresas, tickets, ofertas, SLA, etc.).   Aclarar conceptos SaaS y PWA: Justificar técnicamente cómo se aplica la arquitectura SaaS (multi-tenancy/permisos) y qué características PWA se usarán realmente (instalación, responsividad, offline).   
+    
+    7. Corrección de Prototipo y Errores Visuales/Ortográficos
+    Eliminar error en pantallas: MUY IMPORTANTE: El evaluador detectó el texto "Publicacion de ofertas" en las diapositivas y señala que parece un texto copiado por error de otro proyecto. Nota: Si la funcionalidad de "ofertas" forma parte del modelo técnico acordado, debe explicarse claramente su relación con el mantenimiento; si fue un descuido, debe corregirse/eliminarse inmediatamente.   Limpieza de Diapositivas: Eliminar marcas de generación técnica como "PptxGenJS Presentation" en la primera diapositiva.   Ortografía y Formato: Revisar tildes (creación, publicación, mantenimiento), unificar nomenclatura (ticket vs incidencia vs OT) y corregir textos desalineados o cortados.   
+    
+    8. Plan de Pruebas y Gestión de Calidad (QA)
+    Casos de prueba concretos: Diseñar una tabla de pruebas para las funciones clave con: Entrada, Acción, Resultado Esperado y Resultado Obtenido.   Relacionar Historias de Usuario con Criterios de Aceptación: Para validar objetivamente 
