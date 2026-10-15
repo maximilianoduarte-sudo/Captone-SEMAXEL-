@@ -40,7 +40,7 @@ def disponibles(request):
         .order_by("-fecha_publicacion")
     )
     context = {"ofertas": ofertas, "prioridades": dict(Ticket.Prioridad.choices)}
-    return render(request, "ofertas/disponibles.html", context)
+    return render(request, "tickets/ofertas/disponibles.html", context)
 
 
 @login_required
@@ -54,7 +54,7 @@ def detalle(request, oid):
         "prioridades": dict(Ticket.Prioridad.choices),
         "tomada": request.GET.get("tomada", "") == "1",
     }
-    return render(request, "ofertas/detalle.html", context)
+    return render(request, "tickets/ofertas/detalle.html", context)
 
 
 @login_required
