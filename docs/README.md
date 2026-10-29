@@ -5,7 +5,7 @@ ordenadas según la estructura pedida por la asignatura. El código de la
 aplicación está en la raíz del repositorio.
 
 ```text
-docs/
+Documentos/
 ├── Fase 1/
 │   ├── Evidencias Individuales/   Apellido_Nombre_1.1, 1.2 y 1.3 de cada integrante
 │   └── Evidencias Grupales/       Presentación, 1.4, 1.5, planilla de evaluación y acta
