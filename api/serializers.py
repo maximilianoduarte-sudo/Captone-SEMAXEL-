@@ -70,3 +70,55 @@ class OfertaSerializer(serializers.Serializer):
     fecha_publicacion = serializers.DateTimeField()
     fecha_vencimiento = serializers.DateTimeField()
     observaciones = serializers.CharField()
+
+
+class OrdenSerializer(serializers.Serializer):
+    """Orden de trabajo del técnico (sección Mis trabajos de la app)."""
+
+    id = serializers.IntegerField()
+    estado = serializers.CharField()
+    estado_display = serializers.CharField(source="get_estado_display")
+    titulo = serializers.CharField(source="ticket.titulo")
+    descripcion = serializers.CharField(source="ticket.descripcion")
+    prioridad = serializers.CharField(source="ticket.prioridad")
+    prioridad_display = serializers.CharField(source="ticket.get_prioridad_display")
+    categoria = serializers.CharField(source="ticket.categoria.nombre")
+    empresa = serializers.CharField(source="ticket.sucursal.empresa.nombre")
+    sucursal = SucursalOfertaSerializer(source="ticket.sucursal")
+    diagnostico = serializers.CharField()
+    trabajo_realizado = serializers.CharField()
+    observaciones = serializers.CharField()
+    costo_estimado = serializers.DecimalField(max_digits=12, decimal_places=2)
+    costo_final = serializers.DecimalField(max_digits=12, decimal_places=2)
+    fecha_asignacion = serializers.DateTimeField(source="fecha_creacion")
+    fecha_inicio = serializers.DateTimeField()
+    fecha_fin = serializers.DateTimeField()
+    acciones = serializers.SerializerMethodField()
+
+    def get_acciones(self, orden):
+        """Qué botones mostrar en la app según el estado: "iniciar" y/o "resolver"."""
+        from tickets.models import OrdenTrabajo
+
+        return {
+            OrdenTrabajo.Estado.ASIGNADA: ["iniciar"],
+            OrdenTrabajo.Estado.EN_EJECUCION: ["resolver"],
+        }.get(orden.estado, [])
+
+
+class IniciarOrdenSerializer(serializers.Serializer):
+    """Datos para iniciar el trabajo (ASIGNADA -> EN_EJECUCION)."""
+
+    diagnostico = serializers.CharField()
+    costo_estimado = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=0, required=False
+    )
+
+
+class ResolverOrdenSerializer(serializers.Serializer):
+    """Datos para marcar el trabajo como resuelto (EN_EJECUCION -> RESUELTA)."""
+
+    trabajo_realizado = serializers.CharField()
+    observaciones = serializers.CharField(required=False, allow_blank=True)
+    costo_final = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=0, required=False
+    )

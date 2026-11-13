@@ -21,7 +21,17 @@ from ofertas.models import OfertaTicket
 from ofertas.services import OfertaNoTomable, ofertas_disponibles_para, tomar_oferta
 
 from .permissions import EsTecnicoHabilitado, tecnico_habilitado
-from .serializers import LoginSerializer, OfertaSerializer, TecnicoSerializer
+from tickets.models import OrdenTrabajo
+from tickets.services import TransicionNoPermitida, cambiar_estado_orden
+
+from .serializers import (
+    IniciarOrdenSerializer,
+    LoginSerializer,
+    OfertaSerializer,
+    OrdenSerializer,
+    ResolverOrdenSerializer,
+    TecnicoSerializer,
+)
 
 
 class LoginView(APIView):
@@ -140,3 +150,84 @@ class TomarOfertaView(APIView):
             {"orden_id": orden.pk, "oferta": OfertaSerializer(oferta).data},
             status=status.HTTP_201_CREATED,
         )
+
+
+def _ordenes_del_tecnico(user):
+    """Órdenes del técnico autenticado, con los datos que muestra la app."""
+    return (
+        OrdenTrabajo.objects.filter(tecnico__usuario=user)
+        .select_related("ticket__sucursal__empresa", "ticket__categoria")
+        .order_by("-fecha_creacion")
+    )
+
+
+class MisOrdenesView(APIView):
+    """GET: órdenes del técnico (sección Mis trabajos).
+
+    Filtro opcional: ?estado=ASIGNADA (o EN_EJECUCION, RESUELTA, CERRADA,
+    CANCELADA). Un estado que no existe responde 400.
+    """
+
+    permission_classes = [EsTecnicoHabilitado]
+
+    def get(self, request):
+        ordenes = _ordenes_del_tecnico(request.user)
+        estado = request.query_params.get("estado")
+        if estado:
+            if estado not in OrdenTrabajo.Estado.values:
+                return Response(
+                    {"detail": f"Estado desconocido: {estado}."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            ordenes = ordenes.filter(estado=estado)
+        return Response(OrdenSerializer(ordenes, many=True).data)
+
+
+class OrdenDetalleView(APIView):
+    """GET: detalle de una orden del técnico. Las órdenes ajenas responden 404."""
+
+    permission_classes = [EsTecnicoHabilitado]
+
+    def get(self, request, orden_id):
+        orden = get_object_or_404(_ordenes_del_tecnico(request.user), pk=orden_id)
+        return Response(OrdenSerializer(orden).data)
+
+
+class _TransicionOrdenView(APIView):
+    """Base de iniciar y resolver: valida los datos y llama al servicio común.
+
+    Respuestas: 200 con la orden actualizada; 400 si faltan datos; 404 si la
+    orden no es suya; 409 si el estado actual no permite la acción.
+    """
+
+    permission_classes = [EsTecnicoHabilitado]
+    destino = None
+    serializer_class = None
+
+    def post(self, request, orden_id):
+        orden = get_object_or_404(_ordenes_del_tecnico(request.user), pk=orden_id)
+        datos = self.serializer_class(data=request.data)
+        datos.is_valid(raise_exception=True)
+        try:
+            cambiar_estado_orden(orden, self.destino, request.user, datos=datos.validated_data)
+        except TransicionNoPermitida as error:
+            return Response(
+                {"detail": error.mensaje, "codigo": error.codigo},
+                status=status.HTTP_409_CONFLICT,
+            )
+        orden = _ordenes_del_tecnico(request.user).get(pk=orden.pk)
+        return Response(OrdenSerializer(orden).data)
+
+
+class IniciarOrdenView(_TransicionOrdenView):
+    """POST: el técnico inicia el trabajo (exige diagnóstico)."""
+
+    destino = OrdenTrabajo.Estado.EN_EJECUCION
+    serializer_class = IniciarOrdenSerializer
+
+
+class ResolverOrdenView(_TransicionOrdenView):
+    """POST: el técnico marca el trabajo como resuelto (exige el trabajo realizado)."""
+
+    destino = OrdenTrabajo.Estado.RESUELTA
+    serializer_class = ResolverOrdenSerializer

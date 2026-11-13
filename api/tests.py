@@ -307,3 +307,82 @@ class TomarOfertaApiTests(EscenarioOfertasMixin, TestCase):
             HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.encargado).key}"
         )
         self.assertEqual(self.tomar(self.oferta_electrica.pk).status_code, 403)
+
+
+class MisOrdenesApiTests(EscenarioOfertasMixin, TestCase):
+    """Mis trabajos: GET ordenes/, GET ordenes/<id>/, POST iniciar/ y resolver/."""
+
+    def setUp(self):
+        super().setUp()
+        self.orden = tomar_oferta(self.oferta_electrica, self.tecnico, usuario=self.user)
+
+    def post(self, nombre, datos=None, orden_id=None):
+        url = reverse(f"api:{nombre}", args=[orden_id or self.orden.pk])
+        return self.client.post(url, datos or {}, format="json")
+
+    def test_lista_solo_sus_ordenes(self):
+        otro = crear_usuario("tecnico2", Usuario.Rol.TECNICO, tecnico=True)
+        otro.tecnico.especialidades.set(self.tecnico.especialidades.all())
+        ajena_oferta = self.crear_oferta("Otra falla", self.cat_electrica)
+        tomar_oferta(ajena_oferta, otro.tecnico, usuario=otro)
+
+        resp = self.client.get(reverse("api:ordenes"))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([o["id"] for o in resp.data], [self.orden.pk])
+        self.assertEqual(resp.data[0]["acciones"], ["iniciar"])
+        self.assertEqual(resp.data[0]["sucursal"]["nombre"], "Local Centro")
+
+    def test_filtro_por_estado(self):
+        url = reverse("api:ordenes")
+        self.assertEqual(len(self.client.get(url, {"estado": "ASIGNADA"}).data), 1)
+        self.assertEqual(len(self.client.get(url, {"estado": "RESUELTA"}).data), 0)
+        self.assertEqual(self.client.get(url, {"estado": "INVENTADO"}).status_code, 400)
+
+    def test_detalle_de_orden_ajena_responde_404(self):
+        otro = crear_usuario("tecnico2", Usuario.Rol.TECNICO, tecnico=True)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=otro).key}"
+        )
+        url = reverse("api:orden_detalle", args=[self.orden.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+        self.assertEqual(self.post("iniciar_orden", {"diagnostico": "x"}).status_code, 404)
+
+    def test_iniciar_y_resolver(self):
+        resp = self.post("iniciar_orden", {"diagnostico": "Enchufe derretido", "costo_estimado": "12000"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["estado"], OrdenTrabajo.Estado.EN_EJECUCION)
+        self.assertEqual(resp.data["acciones"], ["resolver"])
+        self.assertEqual(resp.data["costo_estimado"], "12000.00")
+
+        resp = self.post("resolver_orden", {"trabajo_realizado": "Cambio de enchufe"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["estado"], OrdenTrabajo.Estado.RESUELTA)
+        self.assertEqual(resp.data["acciones"], [])
+        self.oferta_electrica.ticket.refresh_from_db()
+        self.assertEqual(self.oferta_electrica.ticket.estado, Ticket.Estado.RESUELTO)
+
+    def test_iniciar_sin_diagnostico_responde_400(self):
+        resp = self.post("iniciar_orden", {})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("diagnostico", resp.data)
+
+    def test_costo_negativo_responde_400(self):
+        resp = self.post("iniciar_orden", {"diagnostico": "x", "costo_estimado": "-1"})
+        self.assertEqual(resp.status_code, 400)
+
+    def test_resolver_sin_iniciar_responde_409(self):
+        resp = self.post("resolver_orden", {"trabajo_realizado": "Listo"})
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data["codigo"], "transicion_invalida")
+
+    def test_iniciar_dos_veces_responde_409(self):
+        self.post("iniciar_orden", {"diagnostico": "x"})
+        resp = self.post("iniciar_orden", {"diagnostico": "x"})
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data["codigo"], "sin_cambio")
+
+    def test_otro_rol_responde_403(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.encargado).key}"
+        )
+        self.assertEqual(self.client.get(reverse("api:ordenes")).status_code, 403)
