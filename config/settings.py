@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # API REST para la app móvil del técnico
+    'rest_framework',
+    'rest_framework.authtoken',
     # Aplicaciones del sistema
     'accounts',
     'empresas',
@@ -50,6 +53,7 @@ INSTALLED_APPS = [
     'sla',
     'mantenimiento',
     'dashboard',
+    'api',
 ]
 
 MIDDLEWARE = [
@@ -170,3 +174,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
+
+
+# API REST (app móvil del técnico)
+# La app se autentica con un token en la cabecera "Authorization: Token <clave>".
+# No usa la sesión del navegador, así que la API no depende de cookies ni CSRF.
+# Por defecto toda operación exige un usuario autenticado y responde solo JSON.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+}

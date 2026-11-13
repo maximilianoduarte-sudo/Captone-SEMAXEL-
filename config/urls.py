@@ -38,6 +38,9 @@ urlpatterns = [
     path('empresas/', include('empresas.urls')),
     path('tecnicos/', include('tecnicos.urls')),
     path('mantenimiento/', include('mantenimiento.urls')),
+
+    # API REST de la app móvil del técnico (versión 1)
+    path('api/v1/', include('api.urls')),
 ]
 
 # Servir archivos de medios en modo desarrollo
