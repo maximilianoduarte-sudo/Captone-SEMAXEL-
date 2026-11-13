@@ -13,6 +13,9 @@ Quién puede aplicar cada transición:
   cerrar y cancelar.
 - GERENCIA: ninguna. Su perfil es de solo lectura.
 """
+import math
+
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -20,7 +23,14 @@ from accounts.models import Usuario
 from accounts.roles import rol_usuario
 from tecnicos.models import Tecnico
 
-from .models import Calificacion, OrdenTrabajo, Ticket, TicketHistorial
+from .models import (
+    Calificacion,
+    EvidenciaOrden,
+    FirmaConformidad,
+    OrdenTrabajo,
+    Ticket,
+    TicketHistorial,
+)
 
 CAMPOS_DE_TRABAJO = (
     "diagnostico",
@@ -33,8 +43,21 @@ CAMPOS_DE_TRABAJO = (
 ESTADOS_TERMINO = (OrdenTrabajo.Estado.CERRADA, OrdenTrabajo.Estado.CANCELADA)
 
 
-class TransicionNoPermitida(Exception):
-    """No se puede aplicar la transición. `mensaje` es para la persona; `codigo`, para el programa.
+class ReglaNoCumplida(Exception):
+    """Una operación sobre la orden no cumple una regla de negocio.
+
+    `mensaje` es para la persona; `codigo`, para el programa (la app decide
+    qué hacer según el código). No se cambia nada cuando se lanza.
+    """
+
+    def __init__(self, mensaje, codigo):
+        super().__init__(mensaje)
+        self.mensaje = mensaje
+        self.codigo = codigo
+
+
+class TransicionNoPermitida(ReglaNoCumplida):
+    """No se puede aplicar la transición de estado.
 
     Códigos posibles:
     - "sin_cambio": la orden ya está en ese estado.
@@ -45,10 +68,17 @@ class TransicionNoPermitida(Exception):
     - "falta_calificacion": cerrar exige una calificación de 1 a 5.
     """
 
-    def __init__(self, mensaje, codigo):
-        super().__init__(mensaje)
-        self.mensaje = mensaje
-        self.codigo = codigo
+
+class OperacionNoPermitida(ReglaNoCumplida):
+    """No se puede registrar la llegada, una evidencia o la firma.
+
+    Códigos posibles:
+    - "sin_permiso": la orden no es del técnico (o la evidencia no es suya).
+    - "orden_no_activa": el estado de la orden no permite la operación.
+    - "llegada_ya_registrada": la llegada se registra una sola vez.
+    - "limite_evidencias": se alcanzó el máximo de fotos por orden.
+    - "firma_ya_registrada": la orden ya tiene firma de conformidad.
+    """
 
 
 def puede_aplicar_transicion(user, orden, destino):
@@ -220,3 +250,174 @@ def _liberar_tecnico(orden):
     if not activas.exists():
         tecnico.estado = Tecnico.Estado.DISPONIBLE
         tecnico.save(update_fields=["estado"])
+
+
+# ---------------------------------------------------------------------------
+# Trabajo en terreno: llegada con GPS, fotos de evidencia y firma
+# ---------------------------------------------------------------------------
+
+ESTADOS_ACTIVOS = (OrdenTrabajo.Estado.ASIGNADA, OrdenTrabajo.Estado.EN_EJECUCION)
+ESTADOS_CON_EVIDENCIA = (*ESTADOS_ACTIVOS, OrdenTrabajo.Estado.RESUELTA)
+ESTADOS_PARA_FIRMAR = (OrdenTrabajo.Estado.EN_EJECUCION, OrdenTrabajo.Estado.RESUELTA)
+
+RADIO_TIERRA_METROS = 6_371_000
+
+
+def distancia_metros(lat1, lon1, lat2, lon2):
+    """Distancia en metros entre dos puntos GPS (fórmula de haversine).
+
+    Considera la Tierra como una esfera; para distancias de cientos de metros
+    el error es despreciable.
+    """
+    lat1, lon1, lat2, lon2 = (math.radians(float(v)) for v in (lat1, lon1, lat2, lon2))
+    dlat, dlon = lat2 - lat1, lon2 - lon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+    return 2 * RADIO_TIERRA_METROS * math.asin(math.sqrt(a))
+
+
+def _exigir_tecnico_de_la_orden(orden, usuario):
+    if orden.tecnico.usuario_id != usuario.id:
+        raise OperacionNoPermitida("Esta orden no está asignada a ti.", "sin_permiso")
+
+
+def registrar_llegada(orden, usuario, latitud, longitud, precision_m=None):
+    """Registra que el técnico llegó al local, con su posición GPS.
+
+    - Solo el técnico de la orden, con la orden ASIGNADA o EN_EJECUCION.
+    - Se registra una sola vez.
+    - Si la sucursal tiene coordenadas, calcula la distancia y marca la
+      llegada como verificada cuando está dentro del radio permitido
+      (SEMAXEL_RADIO_LLEGADA_METROS). Si no tiene, queda "no verificable".
+    - Completa la fecha de respuesta de la oferta (dato del SLA de
+      respuesta, que antes nunca se llenaba) y deja constancia en el
+      historial del ticket.
+    """
+    with transaction.atomic():
+        orden = (
+            OrdenTrabajo.objects.select_for_update()
+            .select_related("ticket__sucursal", "tecnico", "oferta")
+            .get(pk=orden.pk)
+        )
+        _exigir_tecnico_de_la_orden(orden, usuario)
+        if orden.estado not in ESTADOS_ACTIVOS:
+            raise OperacionNoPermitida(
+                "Solo se registra la llegada en órdenes asignadas o en ejecución.",
+                "orden_no_activa",
+            )
+        if orden.fecha_llegada:
+            raise OperacionNoPermitida(
+                "La llegada ya fue registrada.", "llegada_ya_registrada"
+            )
+
+        ahora = timezone.now()
+        sucursal = orden.ticket.sucursal
+        orden.fecha_llegada = ahora
+        orden.llegada_latitud = round(float(latitud), 6)
+        orden.llegada_longitud = round(float(longitud), 6)
+        orden.llegada_precision_m = precision_m
+        if sucursal.tiene_coordenadas:
+            distancia = distancia_metros(latitud, longitud, sucursal.latitud, sucursal.longitud)
+            orden.llegada_distancia_m = round(distancia)
+            orden.llegada_verificada = distancia <= settings.SEMAXEL_RADIO_LLEGADA_METROS
+        else:
+            orden.llegada_distancia_m = None
+            orden.llegada_verificada = None
+        orden.save(update_fields=[
+            "fecha_llegada", "llegada_latitud", "llegada_longitud",
+            "llegada_precision_m", "llegada_distancia_m", "llegada_verificada",
+        ])
+
+        if orden.oferta and not orden.oferta.fecha_respuesta:
+            orden.oferta.fecha_respuesta = ahora
+            orden.oferta.save(update_fields=["fecha_respuesta"])
+
+        if orden.llegada_verificada is None:
+            detalle = "no verificable: la sucursal no tiene coordenadas"
+        elif orden.llegada_verificada:
+            detalle = f"verificada a {orden.llegada_distancia_m} m de la sucursal"
+        else:
+            detalle = f"fuera del radio: a {orden.llegada_distancia_m} m de la sucursal"
+        ticket = orden.ticket
+        TicketHistorial.objects.create(
+            ticket=ticket,
+            usuario=usuario,
+            estado_anterior=ticket.estado,
+            estado_nuevo=ticket.estado,
+            comentario=f"Llegada del técnico {orden.tecnico.nombre} al local ({detalle}).",
+        )
+    return orden
+
+
+def agregar_evidencia(orden, usuario, imagen, descripcion=""):
+    """Agrega una foto de evidencia a la orden.
+
+    Solo el técnico de la orden, mientras esté asignada, en ejecución o
+    resuelta (antes del cierre), y hasta SEMAXEL_MAX_EVIDENCIAS_POR_ORDEN fotos.
+    """
+    with transaction.atomic():
+        orden = OrdenTrabajo.objects.select_for_update().select_related("tecnico").get(pk=orden.pk)
+        _exigir_tecnico_de_la_orden(orden, usuario)
+        if orden.estado not in ESTADOS_CON_EVIDENCIA:
+            raise OperacionNoPermitida(
+                "La orden ya está cerrada o cancelada; no admite nuevas evidencias.",
+                "orden_no_activa",
+            )
+        maximo = settings.SEMAXEL_MAX_EVIDENCIAS_POR_ORDEN
+        if orden.evidencias.count() >= maximo:
+            raise OperacionNoPermitida(
+                f"La orden ya tiene el máximo de {maximo} fotos.", "limite_evidencias"
+            )
+        return EvidenciaOrden.objects.create(
+            orden=orden, imagen=imagen, descripcion=descripcion or "", subida_por=usuario
+        )
+
+
+def eliminar_evidencia(evidencia, usuario):
+    """Elimina una foto subida por error (solo quien la subió, antes del cierre)."""
+    orden = evidencia.orden
+    _exigir_tecnico_de_la_orden(orden, usuario)
+    if evidencia.subida_por_id != usuario.id:
+        raise OperacionNoPermitida("Solo puedes eliminar tus propias fotos.", "sin_permiso")
+    if orden.estado not in ESTADOS_CON_EVIDENCIA:
+        raise OperacionNoPermitida(
+            "La orden ya está cerrada o cancelada; sus evidencias no se modifican.",
+            "orden_no_activa",
+        )
+    evidencia.imagen.delete(save=False)
+    evidencia.delete()
+
+
+def registrar_firma(orden, usuario, imagen, nombre_firmante):
+    """Guarda la firma de conformidad del encargado, capturada en la app.
+
+    Solo el técnico de la orden, con la orden en ejecución o resuelta, y una
+    sola vez por orden. Queda registrada en el historial del ticket.
+    """
+    with transaction.atomic():
+        orden = (
+            OrdenTrabajo.objects.select_for_update()
+            .select_related("ticket", "tecnico")
+            .get(pk=orden.pk)
+        )
+        _exigir_tecnico_de_la_orden(orden, usuario)
+        if orden.estado not in ESTADOS_PARA_FIRMAR:
+            raise OperacionNoPermitida(
+                "La firma se registra con la orden en ejecución o resuelta.",
+                "orden_no_activa",
+            )
+        if FirmaConformidad.objects.filter(orden=orden).exists():
+            raise OperacionNoPermitida(
+                "La orden ya tiene firma de conformidad.", "firma_ya_registrada"
+            )
+        firma = FirmaConformidad.objects.create(
+            orden=orden, imagen=imagen, nombre_firmante=nombre_firmante, registrada_por=usuario
+        )
+        ticket = orden.ticket
+        TicketHistorial.objects.create(
+            ticket=ticket,
+            usuario=usuario,
+            estado_anterior=ticket.estado,
+            estado_nuevo=ticket.estado,
+            comentario=f"Firma de conformidad de {nombre_firmante} registrada en terreno.",
+        )
+    return firma

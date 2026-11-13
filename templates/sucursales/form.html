@@ -68,6 +68,19 @@
                                 <label class="form-label" for="{{ form.estado.id_for_label }}">Estado</label>
                                 {{ form.estado }}
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.latitud.id_for_label }}">Latitud</label>
+                                {{ form.latitud }}
+                                {{ form.latitud.errors }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="{{ form.longitud.id_for_label }}">Longitud</label>
+                                {{ form.longitud }}
+                                {{ form.longitud.errors }}
+                            </div>
+                            <div class="col-12">
+                                <small class="text-muted">Coordenadas de la entrada del local (puedes copiarlas desde un mapa). La app del técnico las usa para validar su llegada con GPS.</small>
+                            </div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end mt-4">
                             <a href="{% url 'sucursales:lista' %}" class="btn btn-outline-secondary">Cancelar</a>

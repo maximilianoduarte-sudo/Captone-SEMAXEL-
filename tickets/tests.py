@@ -199,3 +199,22 @@ class GerenciaOrdenWebTests(EscenarioOrdenMixin, TestCase):
         self.assertEqual(resp.status_code, 302)
         self.recargar()
         self.assertEqual(self.orden.estado, OrdenTrabajo.Estado.CANCELADA)
+
+
+class RegistroEnTerrenoWebTests(EscenarioOrdenMixin, TestCase):
+    """El encargado ve en la web lo que el técnico registró desde la app."""
+
+    def test_detalle_muestra_llegada_y_tiempo_de_respuesta(self):
+        from .services import registrar_llegada
+
+        sucursal = self.ticket.sucursal
+        sucursal.latitud, sucursal.longitud = "-33.437800", "-70.650400"
+        sucursal.save()
+        registrar_llegada(self.orden, self.tecnico_user, "-33.437800", "-70.650400")
+
+        self.client.login(username="encargado1", password=CLAVE)
+        resp = self.client.get(reverse("ordenes:detalle", args=[self.orden.pk]))
+        self.assertContains(resp, "Registro en terreno")
+        self.assertContains(resp, "Verificada")
+        self.assertContains(resp, "Sin política SLA")
+        self.assertContains(resp, "Sin firma.")

@@ -14,7 +14,7 @@ from accounts.roles import (
 from tecnicos.models import Tecnico
 
 from .forms import CambioEstadoOrdenForm
-from .models import OrdenTrabajo
+from .models import FirmaConformidad, OrdenTrabajo
 from .services import (
     TransicionNoPermitida,
     cambiar_estado_orden,
@@ -61,6 +61,7 @@ def detalle(request, oid):
     permitidos = transiciones_permitidas(request.user, orden)
     context = {
         "orden": orden,
+        "firma": FirmaConformidad.objects.filter(orden=orden).first(),
         "estados": dict(OrdenTrabajo.Estado.choices),
         "form_estado": CambioEstadoOrdenForm(instance=orden, estados_permitidos=permitidos),
         "puede_cerrar": OrdenTrabajo.Estado.CERRADA in permitidos,

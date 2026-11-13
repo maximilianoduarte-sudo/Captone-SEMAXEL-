@@ -329,7 +329,9 @@ class MisOrdenesApiTests(EscenarioOfertasMixin, TestCase):
         resp = self.client.get(reverse("api:ordenes"))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual([o["id"] for o in resp.data], [self.orden.pk])
-        self.assertEqual(resp.data[0]["acciones"], ["iniciar"])
+        self.assertEqual(
+            resp.data[0]["acciones"], ["registrar_llegada", "iniciar", "subir_evidencia"]
+        )
         self.assertEqual(resp.data[0]["sucursal"]["nombre"], "Local Centro")
 
     def test_filtro_por_estado(self):
@@ -351,13 +353,16 @@ class MisOrdenesApiTests(EscenarioOfertasMixin, TestCase):
         resp = self.post("iniciar_orden", {"diagnostico": "Enchufe derretido", "costo_estimado": "12000"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["estado"], OrdenTrabajo.Estado.EN_EJECUCION)
-        self.assertEqual(resp.data["acciones"], ["resolver"])
+        self.assertEqual(
+            resp.data["acciones"],
+            ["registrar_llegada", "resolver", "subir_evidencia", "firmar"],
+        )
         self.assertEqual(resp.data["costo_estimado"], "12000.00")
 
         resp = self.post("resolver_orden", {"trabajo_realizado": "Cambio de enchufe"})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["estado"], OrdenTrabajo.Estado.RESUELTA)
-        self.assertEqual(resp.data["acciones"], [])
+        self.assertEqual(resp.data["acciones"], ["subir_evidencia", "firmar"])
         self.oferta_electrica.ticket.refresh_from_db()
         self.assertEqual(self.oferta_electrica.ticket.estado, Ticket.Estado.RESUELTO)
 

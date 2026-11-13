@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # API REST para la app móvil del técnico
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',
     # Aplicaciones del sistema
     'accounts',
     'empresas',
@@ -190,4 +191,40 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
+    # Documentación OpenAPI generada desde el código (drf-spectacular).
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'SEMAXEL · API de la app móvil del técnico',
+    'DESCRIPTION': (
+        'API REST que usa la app Android del técnico de terreno.\n\n'
+        'Autenticación: `POST /api/v1/auth/login/` entrega un token; las demás '
+        'operaciones exigen la cabecera `Authorization: Token <token>`. '
+        'En esta página: botón **Authorize** y escribir `Token ` seguido del token.\n\n'
+        'Errores: 400 datos inválidos (un mensaje por campo), 401 sin token o '
+        'token inválido, 403 no es un técnico habilitado, 404 no existe o no le '
+        'corresponde, 409 una regla de negocio no lo permite (el cuerpo trae '
+        '`detail` y `codigo`).'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # El esquema y Swagger UI son públicos: describen la API, no muestran datos.
+    'SERVE_PERMISSIONS': ['rest_framework.permissions.AllowAny'],
+    'SERVE_AUTHENTICATION': [],
+    'COMPONENT_SPLIT_REQUEST': True,
+}
+
+# Reglas de la app móvil
+# Distancia máxima (en metros) entre el técnico y la sucursal para dar por
+# verificada su llegada con GPS.
+SEMAXEL_RADIO_LLEGADA_METROS = int(os.environ.get('SEMAXEL_RADIO_LLEGADA_METROS', '150'))
+# Fotos de evidencia: máximo por orden y tamaño máximo por archivo.
+SEMAXEL_MAX_EVIDENCIAS_POR_ORDEN = 10
+SEMAXEL_MAX_TAMANO_IMAGEN_MB = 8
+
+# Notificaciones push. "consola" solo las escribe en el log (desarrollo);
+# "fcm" las envía con Firebase Cloud Messaging y exige FCM_CREDENTIALS_FILE
+# (archivo JSON de la cuenta de servicio de Firebase) y el paquete google-auth.
+SEMAXEL_PUSH_BACKEND = os.environ.get('SEMAXEL_PUSH_BACKEND', 'consola')
+FCM_CREDENTIALS_FILE = os.environ.get('FCM_CREDENTIALS_FILE', '')
