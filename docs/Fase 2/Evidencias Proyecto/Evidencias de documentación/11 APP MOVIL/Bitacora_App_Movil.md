@@ -7,8 +7,9 @@ historial de Git y esta bitácora siempre coincidan.
 
 - **Rama:** `feature/app-movil` (el código no entra a `main` hasta revisarlo).
 - **Autor de los commits:** Sebastián Maturana, con apoyo de IA (Claude).
-- **Documentos relacionados:** Documento A (modelo de alta) y Documento B
-  (solicitud de cambio de alcance), en esta misma carpeta.
+- **Documentos relacionados:** Documento A (modelo de alta), Documento B
+  (solicitud de cambio de alcance) y la
+  [Guía de la API](Guia_API_App_Movil.md), en esta misma carpeta.
 - **Datos:** todos los datos de ejemplo (empresas, locales, personas) son
   hipotéticos.
 
@@ -36,16 +37,15 @@ Cada parte tiene la misma estructura:
 | 2 | Ofertas disponibles para el técnico | `0d85325` | 123 | Hecho |
 | 3 | Tomar una oferta (regla compartida web y API) | `17ebc38` | 135 | Hecho |
 | 4 | Mis trabajos: listar y avanzar órdenes (corrige el bug de Gerencia) | `cce1d41` | 160 | Hecho |
-| 5 | Fotos de evidencia en la orden | — | — | Pendiente |
-| 6 | Coordenadas y horario de la sucursal | — | — | Pendiente |
-| 7 | Llegada con GPS | — | — | Pendiente |
-| 8 | Proyecto Android: login y navegación | — | — | Pendiente |
-| 9 | Pantallas Ofertas y Mis trabajos | — | — | Pendiente |
-| 10 | Cámara, GPS y firma en la app | — | — | Pendiente |
-| 11 | Notificaciones push | — | — | Pendiente |
-| 12 | Servidor de pruebas en el equipo Windows (MySQL, puertos) | — | — | Pendiente |
+| 5 | API completa: coordenadas y horario, llegada GPS, fotos, firma, disponibilidad, inicio, notificaciones push y documentación OpenAPI | `014ec6d` | 195 | Hecho |
+| 6 | Proyecto Android: login y navegación | — | — | Pendiente |
+| 7 | Pantallas Inicio, Ofertas y Mis trabajos | — | — | Pendiente |
+| 8 | Cámara, GPS y firma en la app | — | — | Pendiente |
+| 9 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
+| 10 | Servidor de pruebas en el equipo Windows (MySQL, puertos, archivos) | — | — | Pendiente |
 
-Las partes 4 en adelante son una propuesta de orden y pueden cambiar.
+Con la parte 5 **la API queda completa**: todo lo que la app necesita del
+servidor ya existe, está probado y documentado. Lo que sigue es la app Android.
 
 ---
 
@@ -86,7 +86,7 @@ además será el servidor de pruebas para el celular.
   la línea base).
 
 **Pendiente.** Instalar MySQL en este equipo y repetir las pruebas sobre MySQL
-(ver parte 12).
+(ver parte 10).
 
 ---
 
@@ -290,6 +290,85 @@ encargado sí puede) y 9 de la API.
 
 ---
 
+## Parte 5: API completa (commit `014ec6d`)
+
+**Objetivo.** Terminar de una vez todo lo que la app necesita del servidor, en
+lugar de seguir en partes chicas, y dejarlo documentado para desarrollar la app
+Android contra una API cerrada. La referencia para usarla es la
+[Guía de la API](Guia_API_App_Movil.md); aquí se explica qué se hizo y por qué.
+
+**Qué se agregó.**
+
+| Área | Archivos | Qué hace |
+|---|---|---|
+| Sucursal | `sucursales/models.py`, `forms.py`, `admin.py`, migración `0005` | Latitud y longitud (validadas, juntas o ninguna) y tabla `HorarioSucursal` (un registro por día; sin registro = cerrado). Coordenadas en el formulario web; horario en el administrador. |
+| Llegada con GPS | `tickets/models.py`, migración `0002`, `tickets/services.py` | Campos de llegada en la orden y `registrar_llegada()`: calcula la distancia con la fórmula de haversine y la marca como verificada si está dentro del radio (150 m, configurable). |
+| SLA de respuesta | `tickets/models.py` | `tiempo_respuesta_minutos`, `sla_respuesta_minutos` y `sla_respuesta_cumplido`: desde la creación del ticket hasta la llegada, frente al tiempo máximo de respuesta de la política SLA. |
+| Fotos | `EvidenciaOrden`, `agregar_evidencia()`, `eliminar_evidencia()` | Hasta 10 fotos por orden, máximo 8 MB, solo imágenes reales (Pillow), antes del cierre. |
+| Firma | `FirmaConformidad`, `registrar_firma()` | Imagen del trazo y nombre de quien firma; una vez por orden, en ejecución o resuelta. |
+| Disponibilidad | `tecnicos/services.py` | `cambiar_disponibilidad()`: Disponible o No disponible, salvo si está Ocupado o Inactivo. |
+| Notificaciones | `api/models.py` (`Dispositivo`), `api/notificaciones.py`, `api/signals.py` | Registro de celulares y avisos al publicar una oferta (a técnicos de esa especialidad) y al cerrar o cancelar una orden. |
+| API | `api/serializers.py`, `api/views.py`, `api/urls.py` | 9 operaciones nuevas (la API queda con 19 operaciones en 17 rutas) y los datos nuevos en ofertas y órdenes, incluido el campo `acciones`. |
+| Documentación | `config/settings.py` (drf-spectacular) | Esquema OpenAPI en `/api/v1/schema/` y Swagger en `/api/v1/docs/`, generados desde el código. |
+| Web | `templates/tickets/orden_detalle.html`, `tickets/ordenes_views.py`, `templates/sucursales/form.html` | Tarjeta "Registro en terreno" en el detalle de la orden (llegada, tiempo de respuesta frente al SLA, fotos y firma) y campos de coordenadas en la sucursal. |
+| Datos de demostración | `seed_demo.py` | Coordenadas y horarios hipotéticos para las sucursales de prueba. |
+
+**Cómo funciona.** El flujo completo de un trabajo desde la app:
+
+1. Login → registra el celular para recibir avisos.
+2. Recibe el aviso de una oferta nueva de su especialidad → la toma.
+3. Llega al local → registra la llegada con GPS; el servidor la verifica contra
+   las coordenadas de la sucursal y desde ahí se mide el tiempo de respuesta.
+4. Inicia el trabajo con un diagnóstico → sube fotos.
+5. El encargado firma en el celular del técnico → el técnico marca la orden
+   como resuelta.
+6. El encargado ve todo en la web y cierra la orden con calificación → el
+   técnico recibe el aviso.
+
+**Decisiones.**
+
+- **El servidor calcula la distancia, no la app.** Si lo calculara la app, un
+  celular modificado podría decir que está en el local sin estarlo. El servidor
+  recibe la posición y decide.
+- **"No verificable" en vez de rechazar.** Las sucursales antiguas no tienen
+  coordenadas; la llegada se guarda igual y queda marcada así (Documento A,
+  sección 6.3), para no bloquear el trabajo.
+- **La llegada completa `fecha_respuesta` de la oferta.** Ese campo existía y
+  nunca se llenaba (Reglas de negocio, sección 4): ahora el tiempo de respuesta
+  del SLA se mide de verdad.
+- **Notificaciones con señales de Django.** Se disparan al guardar ofertas y
+  órdenes, sin tocar las vistas web, y solo después de confirmar la transacción
+  (`on_commit`), para no avisar de algo que al final no se guardó. Un error al
+  notificar nunca bloquea la operación.
+- **Backends de notificación intercambiables.** `consola` (desarrollo, sin
+  cuenta de Firebase), `memoria` (pruebas) y `fcm` (Firebase real). Así se pudo
+  programar y probar todo sin depender todavía de la cuenta de Firebase.
+- **Documentación generada desde el código** (drf-spectacular). La
+  documentación no puede quedar desactualizada respecto de la API, porque sale
+  de las mismas clases. Swagger permite probar cada operación desde el
+  navegador.
+- **Se valida que las fotos sean imágenes reales** (Pillow), no solo por la
+  extensión del archivo.
+- **Disponibilidad bloqueada si está Ocupado.** Lo libera el sistema al terminar
+  sus órdenes; así no puede quedar "Disponible" con trabajos activos.
+
+**Pruebas (35 nuevas).** Distancia (2), llegada (9), fotos (6), firma (3),
+perfil, inicio y dispositivos (5), notificaciones (3), documentación (1),
+coordenadas y horario de la sucursal (5) y la tarjeta web de terreno (1). Las
+pruebas de órdenes de la parte 4 se ajustaron al nuevo campo `acciones`.
+
+**Prueba de punta a punta.** Además de las pruebas automáticas, se levantó el
+servidor con los datos de demostración y se recorrió el flujo completo con
+llamadas reales: login, inicio, ofertas, tomar, llegada (verificada a 0 m),
+iniciar, subir una foto (y descargarla), firma, resolver, registrar el celular,
+intento de cambiar disponibilidad estando ocupado (409, correcto) y cierre de
+sesión (el token deja de servir: 401). Swagger se revisó en el navegador.
+
+**Migraciones.** `sucursales 0005`, `tickets 0002` y `api 0001`. Solo agregan
+columnas y tablas; no borran ni cambian datos existentes.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -297,22 +376,39 @@ exigen la cabecera `Authorization: Token <token>`.
 
 | Método | Ruta | Qué hace | Respuestas |
 |---|---|---|---|
-| POST | `auth/login/` | Entrega el token | 200, 400, 403 |
-| POST | `auth/logout/` | Borra el token | 204, 401 |
+| POST | `auth/login/` | Entrega el token (sin token) | 200, 400, 403 |
+| POST | `auth/logout/` | Borra el token (y el celular, si se indica) | 204, 401 |
 | GET | `auth/perfil/` | Perfil del técnico | 200, 401, 403 |
+| PATCH | `auth/perfil/` | Cambia su disponibilidad | 200, 400, 401, 403, 409 |
+| POST | `dispositivos/` | Registra el celular para avisos push | 200, 201, 400, 401, 403 |
+| DELETE | `dispositivos/<id>/` | Quita un celular | 204, 401, 403, 404 |
+| GET | `inicio/` | Resumen para la pantalla Inicio | 200, 401, 403 |
 | GET | `ofertas/` | Ofertas que puede tomar | 200, 401, 403 |
 | GET | `ofertas/<id>/` | Detalle de una oferta | 200, 401, 403, 404 |
 | POST | `ofertas/<id>/tomar/` | Toma la oferta | 201, 401, 403, 404, 409 |
 | GET | `ordenes/` | Sus órdenes (filtro opcional `?estado=`) | 200, 400, 401, 403 |
 | GET | `ordenes/<id>/` | Detalle de una orden suya | 200, 401, 403, 404 |
-| POST | `ordenes/<id>/iniciar/` | Inicia el trabajo (`diagnostico`, `costo_estimado`) | 200, 400, 401, 403, 404, 409 |
-| POST | `ordenes/<id>/resolver/` | Marca como resuelta (`trabajo_realizado`, `observaciones`, `costo_final`) | 200, 400, 401, 403, 404, 409 |
+| POST | `ordenes/<id>/iniciar/` | Inicia el trabajo | 200, 400, 401, 403, 404, 409 |
+| POST | `ordenes/<id>/resolver/` | Marca como resuelta | 200, 400, 401, 403, 404, 409 |
+| POST | `ordenes/<id>/llegada/` | Registra la llegada con GPS | 201, 400, 401, 403, 404, 409 |
+| GET | `ordenes/<id>/evidencias/` | Lista las fotos | 200, 401, 403, 404 |
+| POST | `ordenes/<id>/evidencias/` | Sube una foto (multipart) | 201, 400, 401, 403, 404, 409 |
+| DELETE | `ordenes/<id>/evidencias/<id>/` | Elimina una foto | 204, 401, 403, 404, 409 |
+| POST | `ordenes/<id>/firma/` | Firma de conformidad (multipart) | 201, 400, 401, 403, 404, 409 |
+| GET | `schema/` y `docs/` | Esquema OpenAPI y Swagger (públicos) | 200 |
+
+El detalle de cada operación, con ejemplos de entrada y salida, está en la
+[Guía de la API](Guia_API_App_Movil.md) y en Swagger (`/api/v1/docs/`).
 
 Significado de los códigos: 200/201/204 correcto; 400 datos inválidos; 401 falta
 el token o no es válido; 403 no es un técnico habilitado; 404 no existe o no le
 corresponde; 409 la acción no se puede hacer en el estado actual.
 
 ## Probarlo a mano
+
+La forma más simple es Swagger: abrir `http://localhost:8000/api/v1/docs/`,
+iniciar sesión con `auth/login/`, presionar **Authorize** y escribir `Token `
+seguido del token. Desde la consola:
 
 Con el servidor corriendo (`python manage.py runserver`) y los datos de
 demostración cargados (`python manage.py seed_demo`, que crea técnicos como
@@ -331,9 +427,13 @@ curl -X POST http://localhost:8000/api/v1/ofertas/1/tomar/ -H "Authorization: To
 # 4. Ver mis trabajos
 curl http://localhost:8000/api/v1/ordenes/ -H "Authorization: Token PEGAR_TOKEN"
 
-# 5. Iniciar y resolver la orden con id 1
+# 5. Registrar la llegada, iniciar y resolver la orden con id 1
+curl -X POST http://localhost:8000/api/v1/ordenes/1/llegada/ -H "Authorization: Token PEGAR_TOKEN" -H "Content-Type: application/json" -d "{\"latitud\": \"-33.429500\", \"longitud\": \"-70.617700\"}"
 curl -X POST http://localhost:8000/api/v1/ordenes/1/iniciar/ -H "Authorization: Token PEGAR_TOKEN" -H "Content-Type: application/json" -d "{\"diagnostico\": \"Enchufe derretido\"}"
 curl -X POST http://localhost:8000/api/v1/ordenes/1/resolver/ -H "Authorization: Token PEGAR_TOKEN" -H "Content-Type: application/json" -d "{\"trabajo_realizado\": \"Cambio de enchufe\"}"
+
+# 6. Subir una foto
+curl -X POST http://localhost:8000/api/v1/ordenes/1/evidencias/ -H "Authorization: Token PEGAR_TOKEN" -F "imagen=@foto.jpg" -F "descripcion=Antes del cambio"
 ```
 
 ---
@@ -347,7 +447,11 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H1 | La web muestra al técnico todas las ofertas, no solo las de su especialidad (HU-09). | Por decidir |
 | H2 | En la web, "tomar oferta" se ejecuta con un enlace `GET`: un enlace malicioso podría hacer que un técnico tome una oferta sin querer. Arreglarlo exige cambiar el botón del template. | Por decidir |
 | H3 | Gerencia podía cerrar o cancelar una orden de trabajo aunque es de solo lectura. | Corregido en la parte 4 |
-| H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 12 |
+| H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 10 |
 | H5 | Los tokens de la API no vencen; si se pierde un celular, hay que borrar el token desde el admin. | Evaluar vencimiento |
 | H6 | El registro de requisitos dice 95 pruebas (RNF-15), pero había 97 antes de este trabajo. | Corregir al actualizar requisitos |
 | H7 | El traspaso decía que las fotos completan el RF-11, pero el RF-11 es "Asignación de encargados a sucursales". | Consultar al PO |
+| H8 | En la web, si un técnico OCUPADO guarda su perfil, el formulario lo deja DISPONIBLE (el selector parte en "Disponible"). La API ya no lo permite (parte 5); la web sigue igual. | Por decidir |
+| H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 10 |
+| H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
+| H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 9 |

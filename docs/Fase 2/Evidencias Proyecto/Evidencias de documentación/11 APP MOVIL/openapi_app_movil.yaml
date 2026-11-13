@@ -1,0 +1,1402 @@
+openapi: 3.0.3
+info:
+  title: SEMAXEL · API de la app móvil del técnico
+  version: 1.0.0
+  description: |-
+    API REST que usa la app Android del técnico de terreno.
+
+    Autenticación: `POST /api/v1/auth/login/` entrega un token; las demás operaciones exigen la cabecera `Authorization: Token <token>`. En esta página: botón **Authorize** y escribir `Token ` seguido del token.
+
+    Errores: 400 datos inválidos (un mensaje por campo), 401 sin token o token inválido, 403 no es un técnico habilitado, 404 no existe o no le corresponde, 409 una regla de negocio no lo permite (el cuerpo trae `detail` y `codigo`).
+paths:
+  /api/v1/auth/login/:
+    post:
+      operationId: api_v1_auth_login_create
+      description: Usuario y contraseña (los mismos de la web). Solo los técnicos
+        con cuenta activa, rol TECNICO y perfil no INACTIVO reciben token. Si el técnico
+        ya tenía token, se reutiliza.
+      summary: Iniciar sesión
+      tags:
+      - Sesión
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginRespuesta'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Usuario o contraseña incorrectos.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+  /api/v1/auth/logout/:
+    post:
+      operationId: api_v1_auth_logout_create
+      description: 'Borra el token: deja de servir. Si se envía `token_dispositivo`,
+        ese celular deja de recibir notificaciones. Basta con estar autenticado (aunque
+        el técnico haya sido desactivado, puede cerrar su sesión).'
+      summary: Cerrar sesión
+      tags:
+      - Sesión
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+  /api/v1/auth/perfil/:
+    get:
+      operationId: api_v1_auth_perfil_retrieve
+      description: Perfil del técnico y cambio de disponibilidad.
+      summary: Ver mi perfil
+      tags:
+      - Perfil
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tecnico'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+    patch:
+      operationId: api_v1_auth_perfil_partial_update
+      description: 'El técnico elige DISPONIBLE o NO_DISPONIBLE. No se puede cambiar
+        mientras está OCUPADO (tiene órdenes activas): el sistema lo libera al terminarlas.
+        Códigos 409: `tecnico_ocupado`, `tecnico_inactivo`.'
+      summary: Cambiar mi disponibilidad
+      tags:
+      - Perfil
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDisponibilidadRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDisponibilidadRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDisponibilidadRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tecnico'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/dispositivos/:
+    post:
+      operationId: api_v1_dispositivos_create
+      description: La app envía el token de Firebase Cloud Messaging (FCM) al iniciar
+        sesión y cada vez que Firebase lo renueva. Si el token ya existía, se actualiza
+        y queda a nombre de este técnico (201 si es nuevo, 200 si ya estaba).
+      summary: Registrar este celular
+      tags:
+      - Notificaciones
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispositivoRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DispositivoRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DispositivoRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispositivo'
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Dispositivo'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+  /api/v1/dispositivos/{dispositivo_id}/:
+    delete:
+      operationId: api_v1_dispositivos_destroy
+      summary: Quitar un celular
+      parameters:
+      - in: path
+        name: dispositivo_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Notificaciones
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+  /api/v1/inicio/:
+    get:
+      operationId: api_v1_inicio_retrieve
+      description: Perfil, cantidad de ofertas que puede tomar y sus órdenes activas.
+      summary: Resumen de inicio
+      tags:
+      - Inicio
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inicio'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+  /api/v1/ofertas/:
+    get:
+      operationId: api_v1_ofertas_list
+      description: Ofertas DISPONIBLES cuya categoría exige una especialidad que el
+        técnico tiene (historia HU-09). Antes de responder se expiran las vencidas,
+        igual que en la web.
+      summary: Ofertas que puedo tomar
+      tags:
+      - Ofertas
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Oferta'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+  /api/v1/ofertas/{oferta_id}/:
+    get:
+      operationId: api_v1_ofertas_retrieve
+      description: Visible si está entre las que puede tomar o si ya la tomó él. Cualquier
+        otra responde 404 (no se revela que existe).
+      summary: Detalle de una oferta
+      parameters:
+      - in: path
+        name: oferta_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Ofertas
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Oferta'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+  /api/v1/ofertas/{oferta_id}/tomar/:
+    post:
+      operationId: api_v1_ofertas_tomar_create
+      description: 'Usa la misma regla que la web (`ofertas.services.tomar_oferta`).
+        Crea la orden de trabajo ASIGNADA y deja al técnico OCUPADO. Códigos 409:
+        `no_disponible`, `vencida`, `ticket_no_permite`, `sin_especialidad`, `especialidad_no_coincide`.'
+      summary: Tomar una oferta
+      parameters:
+      - in: path
+        name: oferta_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Ofertas
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TomarOfertaRespuesta'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/:
+    get:
+      operationId: api_v1_ordenes_list
+      description: Utilidades comunes a las vistas de una orden del técnico.
+      summary: Mis órdenes de trabajo
+      parameters:
+      - in: query
+        name: estado
+        schema:
+          type: string
+          enum:
+          - ASIGNADA
+          - CANCELADA
+          - CERRADA
+          - EN_EJECUCION
+          - RESUELTA
+        description: Filtra por estado. Un estado desconocido responde 400.
+      tags:
+      - Mis trabajos
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Orden'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+  /api/v1/ordenes/{orden_id}/:
+    get:
+      operationId: api_v1_ordenes_retrieve
+      description: 'Incluye llegada, tiempo de respuesta frente al SLA, fotos, firma
+        y `acciones`: los botones que la app debe mostrar.'
+      summary: Detalle de una orden
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Mis trabajos
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+  /api/v1/ordenes/{orden_id}/evidencias/:
+    get:
+      operationId: api_v1_ordenes_evidencias_list
+      description: Utilidades comunes a las vistas de una orden del técnico.
+      summary: Fotos de la orden
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Evidencias
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Evidencia'
+          description: ''
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+    post:
+      operationId: api_v1_ordenes_evidencias_create
+      description: 'Envío multipart/form-data con el campo `imagen` (JPG o PNG, máximo
+        8 MB) y, opcionalmente, `descripcion`. Se acepta mientras la orden está asignada,
+        en ejecución o resuelta, hasta 10 fotos. Códigos 409: `orden_no_activa`, `limite_evidencias`.'
+      summary: Subir una foto
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Evidencias
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SubirEvidenciaRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Evidencia'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/{orden_id}/evidencias/{evidencia_id}/:
+    delete:
+      operationId: api_v1_ordenes_evidencias_destroy
+      description: 'Solo quien la subió y antes del cierre de la orden. Códigos 409:
+        `orden_no_activa`, `sin_permiso`.'
+      summary: Eliminar una foto
+      parameters:
+      - in: path
+        name: evidencia_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Evidencias
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/{orden_id}/firma/:
+    post:
+      operationId: api_v1_ordenes_firma_create
+      description: 'El encargado firma en el celular del técnico. Envío multipart/form-data
+        con `imagen` (PNG del trazo) y `nombre_firmante`. Una sola vez por orden,
+        con la orden en ejecución o resuelta. Códigos 409: `orden_no_activa`, `firma_ya_registrada`.'
+      summary: Registrar la firma de conformidad
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Evidencias
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FirmaEntradaRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/{orden_id}/iniciar/:
+    post:
+      operationId: api_v1_ordenes_iniciar_create
+      description: 'ASIGNADA → EN_EJECUCION. Exige diagnóstico. Usa la misma regla
+        que la web (`tickets.services.cambiar_estado_orden`). Códigos 409: `sin_cambio`,
+        `transicion_invalida`, `sin_permiso`.'
+      summary: Iniciar el trabajo
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Mis trabajos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IniciarOrdenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/IniciarOrdenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/IniciarOrdenRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/{orden_id}/llegada/:
+    post:
+      operationId: api_v1_ordenes_llegada_create
+      description: 'Guarda la hora y la posición del técnico. Si la sucursal tiene
+        coordenadas, calcula la distancia y marca la llegada como verificada cuando
+        está dentro del radio permitido (150 m por defecto). Con esto se mide el tiempo
+        de respuesta del SLA. Se registra una sola vez. Códigos 409: `orden_no_activa`,
+        `llegada_ya_registrada`.'
+      summary: Registrar llegada con GPS
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Mis trabajos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistrarLlegadaRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegistrarLlegadaRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegistrarLlegadaRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+  /api/v1/ordenes/{orden_id}/resolver/:
+    post:
+      operationId: api_v1_ordenes_resolver_create
+      description: 'EN_EJECUCION → RESUELTA. Exige el trabajo realizado. El ticket
+        pasa a RESUELTO y el técnico queda disponible si no tiene otras órdenes activas.
+        El cierre lo hace el encargado en la web. Usa la misma regla que la web (`tickets.services.cambiar_estado_orden`).
+        Códigos 409: `sin_cambio`, `transicion_invalida`, `sin_permiso`.'
+      summary: Marcar como resuelta
+      parameters:
+      - in: path
+        name: orden_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Mis trabajos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolverOrdenRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResolverOrdenRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResolverOrdenRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Orden'
+          description: ''
+        '400':
+          description: 'Datos inválidos: un mensaje por cada campo con error.'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Falta el token o no es válido.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No es un técnico habilitado.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: No existe o no le corresponde.
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: La regla de negocio no lo permite; ver `codigo`.
+components:
+  schemas:
+    Dispositivo:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        token:
+          type: string
+          title: Token FCM
+          maxLength: 255
+        plataforma:
+          $ref: '#/components/schemas/PlataformaEnum'
+        fecha_registro:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fecha de registro
+      required:
+      - fecha_registro
+      - id
+      - token
+    DispositivoRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+          title: Token FCM
+          maxLength: 255
+        plataforma:
+          $ref: '#/components/schemas/PlataformaEnum'
+      required:
+      - token
+    Error:
+      type: object
+      description: Cuerpo de los errores 403, 404 y 409.
+      properties:
+        detail:
+          type: string
+          description: Mensaje para mostrar a la persona.
+        codigo:
+          type: string
+          description: Código para que la app decida qué hacer (solo en 409).
+      required:
+      - detail
+    EstadoEnum:
+      enum:
+      - DISPONIBLE
+      - NO_DISPONIBLE
+      type: string
+      description: |-
+        * `DISPONIBLE` - Disponible
+        * `NO_DISPONIBLE` - No disponible
+    Evidencia:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        url:
+          type: string
+          readOnly: true
+        descripcion:
+          type: string
+          title: Descripción
+          maxLength: 255
+        fecha_subida:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Fecha de subida
+      required:
+      - fecha_subida
+      - id
+      - url
+    Firma:
+      type: object
+      properties:
+        nombre_firmante:
+          type: string
+        url:
+          type: string
+          readOnly: true
+        fecha_firma:
+          type: string
+          format: date-time
+      required:
+      - fecha_firma
+      - nombre_firmante
+      - url
+    FirmaEntradaRequest:
+      type: object
+      description: 'Firma de conformidad (multipart/form-data): imagen PNG del trazo
+        y nombre.'
+      properties:
+        imagen:
+          type: string
+          format: binary
+        nombre_firmante:
+          type: string
+          minLength: 1
+          maxLength: 150
+      required:
+      - imagen
+      - nombre_firmante
+    Horario:
+      type: object
+      properties:
+        dia_semana:
+          type: integer
+          description: 0 = lunes … 6 = domingo.
+        dia:
+          type: string
+        apertura:
+          type: string
+          format: time
+        cierre:
+          type: string
+          format: time
+      required:
+      - apertura
+      - cierre
+      - dia
+      - dia_semana
+    IniciarOrdenRequest:
+      type: object
+      description: Datos para iniciar el trabajo (ASIGNADA -> EN_EJECUCION).
+      properties:
+        diagnostico:
+          type: string
+          minLength: 1
+        costo_estimado:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+      required:
+      - diagnostico
+    Inicio:
+      type: object
+      properties:
+        tecnico:
+          $ref: '#/components/schemas/Tecnico'
+        ofertas_disponibles:
+          type: integer
+          description: Cuántas ofertas puede tomar.
+        ordenes_activas:
+          type: integer
+          description: Órdenes asignadas o en ejecución.
+        ordenes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Orden'
+          description: Sus órdenes activas, la más reciente primero.
+      required:
+      - ofertas_disponibles
+      - ordenes
+      - ordenes_activas
+      - tecnico
+    Llegada:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date-time
+        latitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        precision_m:
+          type: number
+          format: double
+          nullable: true
+        distancia_m:
+          type: integer
+          nullable: true
+          description: Distancia a la sucursal; null si la sucursal no tiene coordenadas.
+        verificada:
+          type: boolean
+          nullable: true
+          description: 'true: dentro del radio; false: fuera; null: no verificable.'
+      required:
+      - distancia_m
+      - fecha
+      - latitud
+      - longitud
+      - precision_m
+      - verificada
+    LoginRequest:
+      type: object
+      description: Datos que envía la app para iniciar sesión (los mismos de la web).
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - username
+    LoginRespuesta:
+      type: object
+      properties:
+        token:
+          type: string
+        tecnico:
+          $ref: '#/components/schemas/Tecnico'
+      required:
+      - tecnico
+      - token
+    LogoutRequest:
+      type: object
+      properties:
+        token_dispositivo:
+          type: string
+          minLength: 1
+          description: Token FCM del celular, para dejar de enviarle notificaciones.
+    Oferta:
+      type: object
+      description: |-
+        Oferta de trabajo tal como la ve el técnico en la app.
+
+        No incluye el número interno del ticket (p. ej. SEMAXEL-00001): igual que
+        en la web, el técnico trabaja con ofertas, no con la administración de
+        tickets.
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        prioridad:
+          type: string
+        prioridad_display:
+          type: string
+        categoria:
+          type: string
+        especialidad:
+          type: string
+        empresa:
+          type: string
+        sucursal:
+          $ref: '#/components/schemas/Sucursal'
+        fecha_publicacion:
+          type: string
+          format: date-time
+        fecha_vencimiento:
+          type: string
+          format: date-time
+          nullable: true
+        observaciones:
+          type: string
+      required:
+      - categoria
+      - descripcion
+      - empresa
+      - estado
+      - fecha_publicacion
+      - fecha_vencimiento
+      - id
+      - observaciones
+      - prioridad
+      - prioridad_display
+      - sucursal
+      - titulo
+    Orden:
+      type: object
+      description: Orden de trabajo del técnico (sección Mis trabajos de la app).
+      properties:
+        id:
+          type: integer
+        estado:
+          type: string
+        estado_display:
+          type: string
+        titulo:
+          type: string
+        descripcion:
+          type: string
+        prioridad:
+          type: string
+        prioridad_display:
+          type: string
+        categoria:
+          type: string
+        empresa:
+          type: string
+        sucursal:
+          $ref: '#/components/schemas/Sucursal'
+        diagnostico:
+          type: string
+        trabajo_realizado:
+          type: string
+        observaciones:
+          type: string
+        costo_estimado:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        costo_final:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+        fecha_asignacion:
+          type: string
+          format: date-time
+        fecha_inicio:
+          type: string
+          format: date-time
+          nullable: true
+        fecha_fin:
+          type: string
+          format: date-time
+          nullable: true
+        llegada:
+          allOf:
+          - $ref: '#/components/schemas/Llegada'
+          nullable: true
+          readOnly: true
+        tiempo_respuesta_minutos:
+          type: integer
+          nullable: true
+          description: Desde la creación del ticket hasta la llegada.
+        sla_respuesta_minutos:
+          type: integer
+          nullable: true
+          description: Tiempo máximo de respuesta según la política SLA.
+        sla_respuesta_cumplido:
+          type: boolean
+          nullable: true
+        evidencias:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidencia'
+        firma:
+          allOf:
+          - $ref: '#/components/schemas/Firma'
+          nullable: true
+          readOnly: true
+        acciones:
+          type: array
+          items:
+            type: string
+          description: |-
+            Botones que la app debe mostrar según el estado de la orden.
+
+            Valores posibles: registrar_llegada, iniciar, resolver,
+            subir_evidencia y firmar.
+          readOnly: true
+      required:
+      - acciones
+      - categoria
+      - costo_estimado
+      - costo_final
+      - descripcion
+      - diagnostico
+      - empresa
+      - estado
+      - estado_display
+      - evidencias
+      - fecha_asignacion
+      - fecha_fin
+      - fecha_inicio
+      - firma
+      - id
+      - llegada
+      - observaciones
+      - prioridad
+      - prioridad_display
+      - sla_respuesta_cumplido
+      - sla_respuesta_minutos
+      - sucursal
+      - tiempo_respuesta_minutos
+      - titulo
+      - trabajo_realizado
+    PatchedDisponibilidadRequest:
+      type: object
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoEnum'
+    PlataformaEnum:
+      enum:
+      - ANDROID
+      type: string
+      description: '* `ANDROID` - Android'
+    RegistrarLlegadaRequest:
+      type: object
+      description: Posición GPS del técnico al llegar al local.
+      properties:
+        latitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+        longitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,4}(?:\.\d{0,6})?$
+        precision_m:
+          type: number
+          format: double
+          minimum: 0
+          description: Precisión informada por el GPS del teléfono.
+      required:
+      - latitud
+      - longitud
+    ResolverOrdenRequest:
+      type: object
+      description: Datos para marcar el trabajo como resuelto (EN_EJECUCION -> RESUELTA).
+      properties:
+        trabajo_realizado:
+          type: string
+          minLength: 1
+        observaciones:
+          type: string
+        costo_final:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+      required:
+      - trabajo_realizado
+    SubirEvidenciaRequest:
+      type: object
+      description: Foto de evidencia (multipart/form-data). Se valida que sea una
+        imagen real.
+      properties:
+        imagen:
+          type: string
+          format: binary
+        descripcion:
+          type: string
+          maxLength: 255
+      required:
+      - imagen
+    Sucursal:
+      type: object
+      description: Datos del local que el técnico necesita para ir y validar su llegada.
+      properties:
+        nombre:
+          type: string
+        direccion:
+          type: string
+        comuna:
+          type: string
+        ciudad:
+          type: string
+        region:
+          type: string
+        telefono:
+          type: string
+        latitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        longitud:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,3}(?:\.\d{0,6})?$
+          nullable: true
+        horario:
+          type: array
+          items:
+            $ref: '#/components/schemas/Horario'
+      required:
+      - ciudad
+      - comuna
+      - direccion
+      - horario
+      - latitud
+      - longitud
+      - nombre
+      - region
+      - telefono
+    Tecnico:
+      type: object
+      description: Perfil del técnico que la app muestra en Inicio y Perfil.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+        nombre:
+          type: string
+        correo:
+          type: string
+          format: email
+        telefono:
+          type: string
+          title: Teléfono
+          maxLength: 30
+        estado:
+          type: string
+        estado_display:
+          type: string
+        especialidades:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - correo
+      - especialidades
+      - estado
+      - estado_display
+      - id
+      - nombre
+      - username
+    TomarOfertaRespuesta:
+      type: object
+      properties:
+        orden_id:
+          type: integer
+        oferta:
+          $ref: '#/components/schemas/Oferta'
+      required:
+      - oferta
+      - orden_id
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
