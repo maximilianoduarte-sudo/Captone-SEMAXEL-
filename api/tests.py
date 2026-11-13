@@ -1,11 +1,18 @@
+from datetime import timedelta
+
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from accounts.models import Usuario
+from empresas.models import Empresa
+from ofertas.models import OfertaTicket
+from sucursales.models import Sucursal
 from tecnicos.models import Especialidad, Tecnico
+from tickets.models import Categoria, Ticket
 
 CLAVE = "Clave.Segura1"
 
@@ -138,3 +145,113 @@ class PerfilYLogoutApiTests(TestCase):
         # Una sesión iniciada en la web no da acceso a la API: se exige token.
         self.client.force_login(self.user)
         self.assertEqual(self.client.get(reverse("api:perfil")).status_code, 401)
+
+
+class OfertasApiTests(TestCase):
+    """GET /api/v1/ofertas/ y /ofertas/<id>/: el técnico ve lo que puede tomar."""
+
+    def setUp(self):
+        self.client = APIClient()
+        electricidad = Especialidad.objects.create(nombre="Electricidad")
+        gasfiteria = Especialidad.objects.create(nombre="Gasfitería")
+        self.cat_electrica = Categoria.objects.create(
+            nombre="Eléctrica", especialidad=electricidad
+        )
+        self.cat_gas = Categoria.objects.create(nombre="Gas", especialidad=gasfiteria)
+        self.cat_sin_especialidad = Categoria.objects.create(nombre="Otros")
+
+        # Datos hipotéticos de prueba.
+        empresa = Empresa.objects.create(nombre="Cadena Demo", rut="76.000.000-0", codigo="DEMO")
+        self.sucursal = Sucursal.objects.create(
+            empresa=empresa, nombre="Local Centro", codigo="CEN",
+            direccion="Av. Ejemplo 123", comuna="Santiago", telefono="+56 2 2000 0000",
+        )
+        self.encargado = crear_usuario("encargado1", Usuario.Rol.ENCARGADO)
+
+        self.user = crear_usuario("tecnico1", Usuario.Rol.TECNICO, tecnico=True)
+        self.tecnico = self.user.tecnico
+        self.tecnico.especialidades.set([electricidad])
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.user).key}"
+        )
+
+        self.oferta_electrica = self.crear_oferta("Enchufe quemado", self.cat_electrica)
+        self.oferta_gas = self.crear_oferta("Fuga de gas", self.cat_gas)
+        self.oferta_sin_especialidad = self.crear_oferta("Varios", self.cat_sin_especialidad)
+
+    def crear_oferta(self, titulo, categoria, **campos):
+        n = Ticket.objects.count() + 1
+        ticket = Ticket.objects.create(
+            numero=f"DEMO-{n:05d}", sucursal=self.sucursal, creador=self.encargado,
+            categoria=categoria, titulo=titulo, descripcion=f"Detalle de {titulo}",
+            estado=Ticket.Estado.PUBLICADO,
+        )
+        return OfertaTicket.objects.create(ticket=ticket, **campos)
+
+    def ids_listado(self):
+        resp = self.client.get(reverse("api:ofertas"))
+        self.assertEqual(resp.status_code, 200)
+        return [o["id"] for o in resp.data]
+
+    def test_lista_solo_ofertas_de_su_especialidad(self):
+        self.assertEqual(self.ids_listado(), [self.oferta_electrica.pk])
+
+    def test_no_lista_ofertas_tomadas(self):
+        self.oferta_electrica.estado = OfertaTicket.Estado.TOMADA
+        self.oferta_electrica.save()
+        self.assertEqual(self.ids_listado(), [])
+
+    def test_expira_y_oculta_ofertas_vencidas(self):
+        vencida = self.crear_oferta(
+            "Luz cortada", self.cat_electrica,
+            fecha_vencimiento=timezone.now() - timedelta(hours=1),
+        )
+        self.assertNotIn(vencida.pk, self.ids_listado())
+        vencida.refresh_from_db()
+        self.assertEqual(vencida.estado, OfertaTicket.Estado.EXPIRADA)
+
+    def test_datos_de_la_oferta_sin_numero_interno_del_ticket(self):
+        oferta = self.client.get(reverse("api:ofertas")).data[0]
+        self.assertEqual(oferta["titulo"], "Enchufe quemado")
+        self.assertEqual(oferta["especialidad"], "Electricidad")
+        self.assertEqual(oferta["sucursal"]["direccion"], "Av. Ejemplo 123")
+        self.assertEqual(oferta["empresa"], "Cadena Demo")
+        self.assertNotIn("numero", oferta)
+        self.assertNotIn("DEMO-", str(oferta))
+
+    def test_detalle_de_una_oferta_que_puede_tomar(self):
+        url = reverse("api:oferta_detalle", args=[self.oferta_electrica.pk])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data["descripcion"], "Detalle de Enchufe quemado")
+
+    def test_detalle_de_otra_especialidad_responde_404(self):
+        for oferta in (self.oferta_gas, self.oferta_sin_especialidad):
+            with self.subTest(oferta=oferta.titulo):
+                url = reverse("api:oferta_detalle", args=[oferta.pk])
+                self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_detalle_de_oferta_tomada_por_el_mismo_tecnico(self):
+        self.oferta_gas.estado = OfertaTicket.Estado.TOMADA
+        self.oferta_gas.tecnico = self.tecnico
+        self.oferta_gas.save()
+        url = reverse("api:oferta_detalle", args=[self.oferta_gas.pk])
+        self.assertEqual(self.client.get(url).status_code, 200)
+
+    def test_detalle_de_oferta_tomada_por_otro_responde_404(self):
+        otro = crear_usuario("tecnico2", Usuario.Rol.TECNICO, tecnico=True).tecnico
+        self.oferta_electrica.estado = OfertaTicket.Estado.TOMADA
+        self.oferta_electrica.tecnico = otro
+        self.oferta_electrica.save()
+        url = reverse("api:oferta_detalle", args=[self.oferta_electrica.pk])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_sin_token_responde_401(self):
+        self.client.credentials()
+        self.assertEqual(self.client.get(reverse("api:ofertas")).status_code, 401)
+
+    def test_otro_rol_responde_403(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.encargado).key}"
+        )
+        self.assertEqual(self.client.get(reverse("api:ofertas")).status_code, 403)

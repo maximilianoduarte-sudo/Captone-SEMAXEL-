@@ -9,14 +9,19 @@ Flujo:
 4. Al cerrar sesión, /api/v1/auth/logout/ borra el token: deja de servir.
 """
 from django.contrib.auth import authenticate
+from django.db.models import Q
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from ofertas.models import OfertaTicket
+from ofertas.services import ofertas_disponibles_para
+
 from .permissions import EsTecnicoHabilitado, tecnico_habilitado
-from .serializers import LoginSerializer, TecnicoSerializer
+from .serializers import LoginSerializer, OfertaSerializer, TecnicoSerializer
 
 
 class LoginView(APIView):
@@ -77,3 +82,32 @@ class PerfilView(APIView):
 
     def get(self, request):
         return Response(TecnicoSerializer(request.user.tecnico).data)
+
+
+class OfertasDisponiblesView(APIView):
+    """GET: ofertas que el técnico puede tomar ahora (sección Ofertas de la app)."""
+
+    permission_classes = [EsTecnicoHabilitado]
+
+    def get(self, request):
+        ofertas = ofertas_disponibles_para(request.user.tecnico, usuario=request.user)
+        return Response(OfertaSerializer(ofertas, many=True).data)
+
+
+class OfertaDetalleView(APIView):
+    """GET: detalle de una oferta.
+
+    El técnico puede ver una oferta si está entre las que puede tomar o si ya
+    la tomó él. Cualquier otra responde 404 (no se revela que existe).
+    """
+
+    permission_classes = [EsTecnicoHabilitado]
+
+    def get(self, request, oferta_id):
+        tecnico = request.user.tecnico
+        disponibles = ofertas_disponibles_para(tecnico, usuario=request.user)
+        visibles = OfertaTicket.objects.filter(
+            Q(pk__in=disponibles.values("pk")) | Q(tecnico=tecnico)
+        ).select_related("ticket__sucursal__empresa", "ticket__categoria__especialidad")
+        oferta = get_object_or_404(visibles, pk=oferta_id)
+        return Response(OfertaSerializer(oferta).data)

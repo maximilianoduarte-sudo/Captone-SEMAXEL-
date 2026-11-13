@@ -46,3 +46,29 @@ def expirar_ofertas_vencidas(usuario=None):
             )
         expiradas += 1
     return expiradas
+
+def ofertas_disponibles_para(tecnico, usuario=None):
+    """Ofertas que un técnico puede tomar ahora (regla HU-09).
+
+    Una oferta aparece solo si cumple todo lo siguiente:
+    - está DISPONIBLE (antes se expiran las vencidas, igual que en la web);
+    - la categoría de su ticket tiene una especialidad definida;
+    - esa especialidad está en el perfil del técnico.
+
+    Así el técnico no ve trabajos que el sistema le impediría tomar.
+    La usa la API de la app móvil; la web todavía muestra todas las
+    disponibles y valida la especialidad recién al tomar la oferta.
+    """
+    expirar_ofertas_vencidas(usuario=usuario)
+    return (
+        OfertaTicket.objects.filter(
+            estado=OfertaTicket.Estado.DISPONIBLE,
+            ticket__categoria__especialidad__isnull=False,
+            ticket__categoria__especialidad__in=tecnico.especialidades.all(),
+        )
+        .select_related(
+            "ticket__sucursal__empresa",
+            "ticket__categoria__especialidad",
+        )
+        .order_by("-fecha_publicacion")
+    )
