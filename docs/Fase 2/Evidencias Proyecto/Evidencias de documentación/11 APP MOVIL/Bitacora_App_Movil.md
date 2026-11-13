@@ -1,8 +1,9 @@
 # Bitácora de desarrollo: app móvil del técnico
 
 Registro paso a paso de lo que se va agregando a SEMAXEL para la app móvil del
-técnico. Se actualiza **en cada parte**, en el mismo commit que el código, para
-que el historial de Git y esta bitácora siempre coincidan.
+técnico. Se actualiza **en cada parte**, en el mismo push que el código (primero el
+commit del código y luego el de la bitácora, que cita su número), para que el
+historial de Git y esta bitácora siempre coincidan.
 
 - **Rama:** `feature/app-movil` (el código no entra a `main` hasta revisarlo).
 - **Autor de los commits:** Sebastián Maturana, con apoyo de IA (Claude).
@@ -34,7 +35,7 @@ Cada parte tiene la misma estructura:
 | 1 | Django REST Framework e inicio de sesión por token | `e555546` | 113 | Hecho |
 | 2 | Ofertas disponibles para el técnico | `0d85325` | 123 | Hecho |
 | 3 | Tomar una oferta (regla compartida web y API) | `17ebc38` | 135 | Hecho |
-| 4 | Mis trabajos: listar y avanzar órdenes | — | — | Pendiente |
+| 4 | Mis trabajos: listar y avanzar órdenes (corrige el bug de Gerencia) | `cce1d41` | 160 | Hecho |
 | 5 | Fotos de evidencia en la orden | — | — | Pendiente |
 | 6 | Coordenadas y horario de la sucursal | — | — | Pendiente |
 | 7 | Llegada con GPS | — | — | Pendiente |
@@ -223,6 +224,72 @@ pasando sin cambios: así se demuestra que la web se comporta igual.
 
 ---
 
+## Parte 4: Mis trabajos (commit `cce1d41`)
+
+**Objetivo.** Que la sección Mis trabajos de la app liste las órdenes del
+técnico y le permita **iniciar** y **resolver** el trabajo, con las mismas
+reglas que la web.
+
+**Qué se agregó o cambió.**
+
+| Archivo | Para qué |
+|---|---|
+| `tickets/services.py` (nuevo) | `cambiar_estado_orden()`, `transiciones_permitidas()` y el error `TransicionNoPermitida`. Las reglas salen de `tickets/ordenes_views.py`. |
+| `tickets/ordenes_views.py` | La web usa el servicio (el archivo bajó unas 120 líneas). |
+| `api/serializers.py` | `OrdenSerializer`, `IniciarOrdenSerializer` y `ResolverOrdenSerializer`. |
+| `api/views.py` y `api/urls.py` | Listado, detalle, iniciar y resolver. |
+| `tickets/tests.py` | Pruebas del servicio y de la corrección de Gerencia (antes estaba vacío). |
+
+**Cómo funciona.** La orden sigue esta máquina de estados:
+
+```
+ASIGNADA ──iniciar──► EN_EJECUCION ──resolver──► RESUELTA ──cerrar──► CERRADA
+    └──────────── cancelar ────────────┘              (encargado, en la web)
+```
+
+| Quién | Qué puede hacer |
+|---|---|
+| Técnico de la orden | Iniciar (exige diagnóstico) y resolver (exige el trabajo realizado). |
+| Admin, Gestor, Encargado | Todo, incluido cerrar (exige calificación de 1 a 5) y cancelar. |
+| Gerencia | Nada: solo consulta. |
+
+`cambiar_estado_orden(orden, destino, usuario, datos)` revisa en orden: que no
+sea el mismo estado (`sin_cambio`), que la transición exista
+(`transicion_invalida`), que el usuario pueda aplicarla (`sin_permiso`) y que
+vengan los datos obligatorios (`falta_diagnostico`, `falta_trabajo`,
+`falta_calificacion`). Si todo está bien, guarda los datos de trabajo, fija las
+fechas de inicio o fin, mueve el ticket al estado equivalente con su entrada en
+el historial, libera al técnico si no tiene otras órdenes activas y, al cerrar,
+registra la calificación.
+
+En la API, cada orden trae el campo `acciones` (`["iniciar"]`, `["resolver"]` o
+`[]`) para que la app sepa qué botón mostrar sin repetir la máquina de estados.
+
+**Decisiones.**
+
+- **Endpoints con nombre de acción** (`iniciar/`, `resolver/`) en vez de uno
+  genérico "cambiar estado": cada uno pide solo sus datos y es más fácil de usar
+  desde la app y de explicar.
+- **El técnico no cierra ni cancela desde la app**: cerrar exige la calificación
+  del encargado, que sigue usando la web. Reabrir (de RESUELTA a EN_EJECUCION)
+  tampoco está en la app por ahora.
+- **Corrección del bug de Gerencia (H3).** Antes, Gerencia podía cerrar o
+  cancelar órdenes aunque su perfil es de solo lectura. Ahora no ve el
+  formulario de transición y, si intenta enviarlo igual, recibe 403. Es el único
+  cambio de comportamiento de la web en esta parte.
+- **Bloqueo de la fila** (`select_for_update`), igual que al tomar ofertas, para
+  que dos cambios simultáneos no se pisen.
+- **Errores por tipo**: 400 si faltan datos o son inválidos (por ejemplo, costo
+  negativo), 404 si la orden no es suya y 409 si el estado actual no permite la
+  acción.
+
+**Pruebas (25 nuevas).** 13 del servicio (iniciar, resolver, cerrar, cancelar,
+datos obligatorios, permisos, técnico que sigue ocupado con otra orden y
+Gerencia), 3 de la web (Gerencia ve sin poder cambiar, recibe 403 al enviar y el
+encargado sí puede) y 9 de la API.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -236,6 +303,10 @@ exigen la cabecera `Authorization: Token <token>`.
 | GET | `ofertas/` | Ofertas que puede tomar | 200, 401, 403 |
 | GET | `ofertas/<id>/` | Detalle de una oferta | 200, 401, 403, 404 |
 | POST | `ofertas/<id>/tomar/` | Toma la oferta | 201, 401, 403, 404, 409 |
+| GET | `ordenes/` | Sus órdenes (filtro opcional `?estado=`) | 200, 400, 401, 403 |
+| GET | `ordenes/<id>/` | Detalle de una orden suya | 200, 401, 403, 404 |
+| POST | `ordenes/<id>/iniciar/` | Inicia el trabajo (`diagnostico`, `costo_estimado`) | 200, 400, 401, 403, 404, 409 |
+| POST | `ordenes/<id>/resolver/` | Marca como resuelta (`trabajo_realizado`, `observaciones`, `costo_final`) | 200, 400, 401, 403, 404, 409 |
 
 Significado de los códigos: 200/201/204 correcto; 400 datos inválidos; 401 falta
 el token o no es válido; 403 no es un técnico habilitado; 404 no existe o no le
@@ -254,8 +325,15 @@ curl -X POST http://localhost:8000/api/v1/auth/login/ -H "Content-Type: applicat
 # 2. Copiar el token de la respuesta y usarlo en las siguientes llamadas
 curl http://localhost:8000/api/v1/ofertas/ -H "Authorization: Token PEGAR_TOKEN"
 
-# 3. Tomar la oferta con id 1
+# 3. Tomar la oferta con id 1 (la respuesta trae el orden_id)
 curl -X POST http://localhost:8000/api/v1/ofertas/1/tomar/ -H "Authorization: Token PEGAR_TOKEN"
+
+# 4. Ver mis trabajos
+curl http://localhost:8000/api/v1/ordenes/ -H "Authorization: Token PEGAR_TOKEN"
+
+# 5. Iniciar y resolver la orden con id 1
+curl -X POST http://localhost:8000/api/v1/ordenes/1/iniciar/ -H "Authorization: Token PEGAR_TOKEN" -H "Content-Type: application/json" -d "{\"diagnostico\": \"Enchufe derretido\"}"
+curl -X POST http://localhost:8000/api/v1/ordenes/1/resolver/ -H "Authorization: Token PEGAR_TOKEN" -H "Content-Type: application/json" -d "{\"trabajo_realizado\": \"Cambio de enchufe\"}"
 ```
 
 ---
@@ -268,7 +346,7 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 |---|---|---|
 | H1 | La web muestra al técnico todas las ofertas, no solo las de su especialidad (HU-09). | Por decidir |
 | H2 | En la web, "tomar oferta" se ejecuta con un enlace `GET`: un enlace malicioso podría hacer que un técnico tome una oferta sin querer. Arreglarlo exige cambiar el botón del template. | Por decidir |
-| H3 | Gerencia puede cerrar una orden de trabajo aunque es de solo lectura. | Se corrige en la parte 4 |
+| H3 | Gerencia podía cerrar o cancelar una orden de trabajo aunque es de solo lectura. | Corregido en la parte 4 |
 | H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 12 |
 | H5 | Los tokens de la API no vencen; si se pierde un celular, hay que borrar el token desde el admin. | Evaluar vencimiento |
 | H6 | El registro de requisitos dice 95 pruebas (RNF-15), pero había 97 antes de este trabajo. | Corregir al actualizar requisitos |
