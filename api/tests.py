@@ -10,9 +10,10 @@ from rest_framework.test import APIClient
 from accounts.models import Usuario
 from empresas.models import Empresa
 from ofertas.models import OfertaTicket
+from ofertas.services import tomar_oferta
 from sucursales.models import Sucursal
 from tecnicos.models import Especialidad, Tecnico
-from tickets.models import Categoria, Ticket
+from tickets.models import Categoria, OrdenTrabajo, Ticket
 
 CLAVE = "Clave.Segura1"
 
@@ -147,8 +148,8 @@ class PerfilYLogoutApiTests(TestCase):
         self.assertEqual(self.client.get(reverse("api:perfil")).status_code, 401)
 
 
-class OfertasApiTests(TestCase):
-    """GET /api/v1/ofertas/ y /ofertas/<id>/: el técnico ve lo que puede tomar."""
+class EscenarioOfertasMixin:
+    """Datos comunes: un técnico electricista y ofertas de tres categorías."""
 
     def setUp(self):
         self.client = APIClient()
@@ -192,6 +193,11 @@ class OfertasApiTests(TestCase):
         resp = self.client.get(reverse("api:ofertas"))
         self.assertEqual(resp.status_code, 200)
         return [o["id"] for o in resp.data]
+
+
+
+class OfertasApiTests(EscenarioOfertasMixin, TestCase):
+    """GET /api/v1/ofertas/ y /ofertas/<id>/: el técnico ve lo que puede tomar."""
 
     def test_lista_solo_ofertas_de_su_especialidad(self):
         self.assertEqual(self.ids_listado(), [self.oferta_electrica.pk])
@@ -255,3 +261,49 @@ class OfertasApiTests(TestCase):
             HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.encargado).key}"
         )
         self.assertEqual(self.client.get(reverse("api:ofertas")).status_code, 403)
+
+
+class TomarOfertaApiTests(EscenarioOfertasMixin, TestCase):
+    """POST /api/v1/ofertas/<id>/tomar/."""
+
+    def tomar(self, oferta_id):
+        return self.client.post(reverse("api:tomar_oferta", args=[oferta_id]))
+
+    def test_toma_la_oferta_y_crea_la_orden(self):
+        resp = self.tomar(self.oferta_electrica.pk)
+        self.assertEqual(resp.status_code, 201)
+        orden = OrdenTrabajo.objects.get(pk=resp.data["orden_id"])
+        self.assertEqual(orden.tecnico, self.tecnico)
+        self.assertEqual(resp.data["oferta"]["estado"], OfertaTicket.Estado.TOMADA)
+        # Ya no aparece en el listado de disponibles.
+        self.assertEqual(self.ids_listado(), [])
+
+    def test_otra_especialidad_responde_409_con_codigo(self):
+        resp = self.tomar(self.oferta_gas.pk)
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data["codigo"], "especialidad_no_coincide")
+        self.assertIn("Gasfitería", resp.data["detail"])
+
+    def test_si_otro_tecnico_la_tomo_primero_responde_409(self):
+        otro = crear_usuario("tecnico2", Usuario.Rol.TECNICO, tecnico=True)
+        otro.tecnico.especialidades.set(self.tecnico.especialidades.all())
+        tomar_oferta(self.oferta_electrica, otro.tecnico, usuario=otro)
+
+        resp = self.tomar(self.oferta_electrica.pk)
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data["codigo"], "no_disponible")
+
+    def test_oferta_inexistente_responde_404(self):
+        self.assertEqual(self.tomar(99999).status_code, 404)
+
+    def test_get_no_toma_la_oferta(self):
+        url = reverse("api:tomar_oferta", args=[self.oferta_electrica.pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.oferta_electrica.refresh_from_db()
+        self.assertEqual(self.oferta_electrica.estado, OfertaTicket.Estado.DISPONIBLE)
+
+    def test_otro_rol_no_puede_tomar(self):
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.encargado).key}"
+        )
+        self.assertEqual(self.tomar(self.oferta_electrica.pk).status_code, 403)

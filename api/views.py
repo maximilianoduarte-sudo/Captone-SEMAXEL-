@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ofertas.models import OfertaTicket
-from ofertas.services import ofertas_disponibles_para
+from ofertas.services import OfertaNoTomable, ofertas_disponibles_para, tomar_oferta
 
 from .permissions import EsTecnicoHabilitado, tecnico_habilitado
 from .serializers import LoginSerializer, OfertaSerializer, TecnicoSerializer
@@ -111,3 +111,32 @@ class OfertaDetalleView(APIView):
         ).select_related("ticket__sucursal__empresa", "ticket__categoria__especialidad")
         oferta = get_object_or_404(visibles, pk=oferta_id)
         return Response(OfertaSerializer(oferta).data)
+
+
+class TomarOfertaView(APIView):
+    """POST: el técnico toma la oferta y se crea su orden de trabajo.
+
+    Usa la misma función que la web (ofertas.services.tomar_oferta).
+    Respuestas:
+    - 201: tomada; incluye el id de la orden de trabajo creada.
+    - 404: la oferta no existe.
+    - 409: no se pudo tomar (ya la tomó otro, venció, especialidad distinta...).
+      El cuerpo trae "detail" (mensaje para mostrar) y "codigo" (para la app).
+    """
+
+    permission_classes = [EsTecnicoHabilitado]
+
+    def post(self, request, oferta_id):
+        oferta = get_object_or_404(OfertaTicket, pk=oferta_id)
+        try:
+            orden = tomar_oferta(oferta, request.user.tecnico, usuario=request.user)
+        except OfertaNoTomable as error:
+            return Response(
+                {"detail": error.mensaje, "codigo": error.codigo},
+                status=status.HTTP_409_CONFLICT,
+            )
+        oferta.refresh_from_db()
+        return Response(
+            {"orden_id": orden.pk, "oferta": OfertaSerializer(oferta).data},
+            status=status.HTTP_201_CREATED,
+        )
