@@ -38,7 +38,7 @@ Cada parte tiene la misma estructura:
 | 3 | Tomar una oferta (regla compartida web y API) | `17ebc38` | 135 | Hecho |
 | 4 | Mis trabajos: listar y avanzar órdenes (corrige el bug de Gerencia) | `cce1d41` | 160 | Hecho |
 | 5 | API completa: coordenadas y horario, llegada GPS, fotos, firma, disponibilidad, inicio, notificaciones push y documentación OpenAPI | `014ec6d` | 195 | Hecho |
-| 6 | Proyecto Android: login y navegación | — | — | Pendiente |
+| 6 | Proyecto Android: base, login, navegación, Inicio y Perfil | `6813f62` | 195 + 11 de la app | Hecho, **sin compilar** |
 | 7 | Pantallas Inicio, Ofertas y Mis trabajos | — | — | Pendiente |
 | 8 | Cámara, GPS y firma en la app | — | — | Pendiente |
 | 9 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
@@ -369,6 +369,86 @@ columnas y tablas; no borran ni cambian datos existentes.
 
 ---
 
+## Parte 6: proyecto Android, login y navegación (commit `6813f62`)
+
+**Objetivo.** Crear la app Android sobre la API ya terminada: estructura del
+proyecto, conexión con el servidor, inicio de sesión y la navegación con las
+cinco secciones. Queda en la carpeta `app-movil/` del repositorio, con su
+propio [README](../../../../../app-movil/README.md).
+
+> **Importante:** esta parte **no se ha compilado**. El equipo Windows no tiene
+> el SDK de Android, así que el código se escribió y se revisó a mano. Hay que
+> abrirlo en Android Studio (por ejemplo, en el Mac) y compilarlo antes de
+> seguir; si aparecen errores, se corrigen en la siguiente parte.
+
+**Qué se agregó.**
+
+| Archivo o carpeta | Para qué |
+|---|---|
+| `settings.gradle.kts`, `build.gradle.kts`, `gradle/libs.versions.toml` | Configuración de Gradle y versiones de todas las bibliotecas en un solo lugar. |
+| `gradle.properties` | Dirección del servidor (`semaxel.apiUrl`); por defecto, el emulador. |
+| `data/remote/SemaxelApi.kt` | Las 19 operaciones de la API como funciones de Retrofit (ya están todas, aunque las pantallas usen solo algunas). |
+| `data/remote/Modelos.kt` | El JSON de la API como clases de Kotlin. |
+| `data/remote/ClienteApi.kt` | Agrega el token a cada petición; si el servidor responde 401, borra la sesión. |
+| `data/remote/ErroresApi.kt` | Traduce los errores del servidor a mensajes para mostrar. |
+| `data/local/SesionStore.kt` | Guarda el token en el celular (DataStore). |
+| `data/Repositorio.kt`, `data/Resultado.kt` | Lo único que usan las pantallas: piden datos y reciben "éxito" o "error explicado". |
+| `ui/SemaxelRaiz.kt` | Muestra el login o la app según haya token. |
+| `ui/login/`, `ui/principal/`, `ui/inicio/`, `ui/perfil/` | Pantallas y su lógica (ViewModel). |
+| `app/src/test/` | 11 pruebas unitarias que no necesitan emulador. |
+
+**Cómo funciona.**
+
+```mermaid
+flowchart TB
+    P["Pantalla (Compose)"] -- "acciones del usuario" --> VM["ViewModel<br/>(estado de la pantalla)"]
+    VM -- "pide datos" --> R["Repositorio"]
+    R --> API["SemaxelApi (Retrofit)"]
+    R --> S["SesionStore (token)"]
+    API -- "HTTP + token" --> Servidor["Servidor SEMAXEL"]
+    VM -- "StateFlow" --> P
+```
+
+1. Al abrir la app, la pantalla raíz mira si hay un token guardado: si no hay,
+   muestra el login; si hay, muestra la app.
+2. En el login, el ViewModel pide al repositorio iniciar sesión. Si funciona,
+   el repositorio guarda el token y la pantalla raíz cambia sola a la app.
+3. Cada petición lleva el token. Si el servidor responde 401 (token borrado o
+   técnico desactivado), el token se borra y la app vuelve sola al login.
+4. La barra inferior tiene las cinco secciones del Documento B. Inicio muestra
+   el resumen (`GET inicio/`) y Perfil, los datos del técnico, el interruptor de
+   disponibilidad y el botón para cerrar sesión. Ofertas, Mis trabajos y
+   Evidencias muestran por ahora un aviso de "próximamente".
+
+**Decisiones.**
+
+- **Arquitectura por capas (pantalla, ViewModel, repositorio, API)**, la
+  recomendada por Google para Android. Las pantallas no saben de Retrofit ni del
+  token, así que la lógica se puede probar con un repositorio falso (como en
+  `LoginViewModelTest`).
+- **Sin bibliotecas de inyección de dependencias** (como Hilt): un `Contenedor`
+  simple crea los objetos una vez. Para el tamaño de esta app es suficiente y se
+  explica en una página.
+- **La sesión decide la pantalla, no la navegación.** Al depender solo de si
+  hay token, nunca puede quedar una pantalla de la app abierta sin sesión.
+- **DataStore para el token**: es el reemplazo actual de SharedPreferences.
+  El token no se cifra en esta versión (ver H13).
+- **Errores siempre explicados.** Toda llamada termina en "éxito" o en un
+  mensaje que se puede mostrar: sin conexión, error de un campo, regla de
+  negocio (409) o sesión vencida.
+- **`explicitNulls = false`**: los campos opcionales vacíos no se envían,
+  porque el servidor rechaza `null` en esos campos (hay una prueba de esto).
+- **HTTP sin cifrar permitido** solo porque el servidor de pruebas aún no tiene
+  HTTPS; está documentado en el propio archivo de configuración.
+
+**Pruebas (11, en la app).** Traducción de errores (4), lectura del JSON real de
+una orden y omisión de campos vacíos (3, incluida la regla de disponibilidad) y
+la lógica del login con un repositorio falso (4). Se ejecutan con
+`./gradlew testDebugUnitTest`. Como no se compiló, **todavía no se han
+ejecutado**.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -455,3 +535,5 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 10 |
 | H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
 | H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 9 |
+| H12 | La app Android no se ha compilado (este equipo no tiene SDK de Android). Falta también `gradlew` y su `.jar`, que Android Studio crea al abrir el proyecto. | Compilar en Android Studio |
+| H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
