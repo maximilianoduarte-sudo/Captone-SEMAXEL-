@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+# Configuración de Firebase: contiene claves del proyecto, no se versiona.
+app/google-services.json

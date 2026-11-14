@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Permite HTTP sin cifrar porque el servidor de pruebas de SEMAXEL todavía no
+    tiene HTTPS. En producción se debe quitar y usar solo HTTPS: el token viaja
+    en cada petición.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

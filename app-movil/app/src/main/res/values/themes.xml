@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base de la ventana; los colores de la app los define Compose (ui/tema). -->
+    <style name="Theme.Semaxel" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#17365D</item>
+    </style>
+</resources>
