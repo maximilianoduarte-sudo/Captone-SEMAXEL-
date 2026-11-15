@@ -38,7 +38,7 @@ Cada parte tiene la misma estructura:
 | 3 | Tomar una oferta (regla compartida web y API) | `17ebc38` | 135 | Hecho |
 | 4 | Mis trabajos: listar y avanzar órdenes (corrige el bug de Gerencia) | `cce1d41` | 160 | Hecho |
 | 5 | API completa: coordenadas y horario, llegada GPS, fotos, firma, disponibilidad, inicio, notificaciones push y documentación OpenAPI | `014ec6d` | 195 | Hecho |
-| 6 | Proyecto Android: base, login, navegación, Inicio y Perfil | `6813f62` | 195 + 11 de la app | Hecho, **sin compilar** |
+| 6 | Proyecto Android: base, login, navegación, Inicio y Perfil | `6813f62` (compilado en `54d81c7`) | 195 + 11 de la app | Hecho |
 | 7 | Pantallas Inicio, Ofertas y Mis trabajos | — | — | Pendiente |
 | 8 | Cámara, GPS y firma en la app | — | — | Pendiente |
 | 9 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
@@ -376,10 +376,12 @@ proyecto, conexión con el servidor, inicio de sesión y la navegación con las
 cinco secciones. Queda en la carpeta `app-movil/` del repositorio, con su
 propio [README](../../../../../app-movil/README.md).
 
-> **Importante:** esta parte **no se ha compilado**. El equipo Windows no tiene
-> el SDK de Android, así que el código se escribió y se revisó a mano. Hay que
-> abrirlo en Android Studio (por ejemplo, en el Mac) y compilarlo antes de
-> seguir; si aparecen errores, se corrigen en la siguiente parte.
+> **Compilación (14-11-2026).** El código se escribió primero sin compilar,
+> porque el equipo Windows no tenía el SDK de Android. Después se instalaron en
+> `D:\herramientas-android\` (el disco C: está casi lleno) el JDK 21, Gradle
+> 8.11.1 y el SDK de Android 35, sin Android Studio. La app **compiló al primer
+> intento, sin advertencias**, y las 11 pruebas unitarias pasaron. Se agregó el
+> `gradlew` oficial al proyecto (commit `54d81c7`).
 
 **Qué se agregó.**
 
@@ -444,8 +446,9 @@ flowchart TB
 **Pruebas (11, en la app).** Traducción de errores (4), lectura del JSON real de
 una orden y omisión de campos vacíos (3, incluida la regla de disponibilidad) y
 la lógica del login con un repositorio falso (4). Se ejecutan con
-`./gradlew testDebugUnitTest`. Como no se compiló, **todavía no se han
-ejecutado**.
+`./gradlew testDebugUnitTest`: **11 de 11 pasan**. La compilación genera el
+APK de depuración (`app-debug.apk`, 17 MB). Todavía no se ha probado en un
+emulador ni en un celular: este equipo no tiene emulador.
 
 ---
 
@@ -535,5 +538,6 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 10 |
 | H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
 | H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 9 |
-| H12 | La app Android no se ha compilado (este equipo no tiene SDK de Android). Falta también `gradlew` y su `.jar`, que Android Studio crea al abrir el proyecto. | Compilar en Android Studio |
+| H12 | La app Android no se había compilado y faltaba `gradlew`. | Resuelto: compila sin advertencias y `gradlew` está en el repositorio |
+| H14 | La app aún no se ha probado en un emulador o celular (solo compilación y pruebas unitarias). | Probar con el servidor de la parte 10 |
 | H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
