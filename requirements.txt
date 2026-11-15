@@ -4,3 +4,5 @@ drf-spectacular==0.28.0
 mysqlclient==2.2.8
 python-dotenv==1.2.3
 Pillow==11.3.0
+whitenoise==6.8.2
+waitress==3.0.2

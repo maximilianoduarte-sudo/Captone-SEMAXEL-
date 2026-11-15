@@ -59,6 +59,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sirve los archivos estáticos (CSS, JS) cuando DEBUG=False.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -162,6 +164,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Servidor de demostración: permite que Django entregue /media/ con DEBUG=False
+# (ver config/urls.py). En producción real lo hace el servidor web.
+SEMAXEL_SERVIR_MEDIA = os.environ.get('SEMAXEL_SERVIR_MEDIA', 'False') == 'True'
 
 
 # Default primary key field type

@@ -8,7 +8,8 @@ gestión de usuarios por rol y acceso según permisos.
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.static import serve
 
 from accounts import views as accounts_views
 from dashboard import views as dashboard_views
@@ -46,3 +47,10 @@ urlpatterns = [
 # Servir archivos de medios en modo desarrollo
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+elif settings.SEMAXEL_SERVIR_MEDIA:
+    # Servidor de demostración sin un servidor web aparte (Nginx, IIS): Django
+    # entrega las fotos subidas aunque DEBUG=False. En producción real lo
+    # debe hacer el servidor web. Se activa con SEMAXEL_SERVIR_MEDIA=True.
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
