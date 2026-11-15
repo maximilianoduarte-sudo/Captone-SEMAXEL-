@@ -24,8 +24,9 @@ Android 35. Mínimo Android 8.0 (API 26).
 ## Abrir y ejecutar
 
 1. En Android Studio: **File → Open** y elegir la carpeta `app-movil/`.
-   Si pregunta por Gradle, aceptar usar el wrapper (Gradle 8.11.1). Si falta el
-   SDK 35, Android Studio ofrece instalarlo.
+   Usa el wrapper incluido (Gradle 8.11.1). Si falta el SDK 35, Android Studio
+   ofrece instalarlo. Sin Android Studio, desde la consola:
+   `./gradlew assembleDebug` genera `app/build/outputs/apk/debug/app-debug.apk`.
 2. Levantar el servidor Django en el computador:
    `python manage.py runserver 0.0.0.0:8000`.
 3. Ejecutar la app en el emulador. Por defecto apunta a `http://10.0.2.2:8000/`,
