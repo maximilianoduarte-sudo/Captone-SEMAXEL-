@@ -381,6 +381,7 @@ Variables de entorno (archivo `.env`):
 | `SEMAXEL_PUSH_BACKEND` | `consola` | `consola` escribe los avisos en el log; `fcm` los envía con Firebase. |
 | `FCM_CREDENTIALS_FILE` | (vacío) | Ruta al JSON de la cuenta de servicio de Firebase. Solo con `fcm`. |
 | `ALLOWED_HOSTS` | `localhost,127.0.0.1` | Agregar la IP o el dominio por el que entra el celular. |
+| `SEMAXEL_SERVIR_MEDIA` | `False` | `True` en el servidor de demostración: Django entrega las fotos (`/media/`) aunque `DEBUG=False`. |
 
 Para activar Firebase: crear el proyecto en la consola de Firebase, descargar
 la clave de la cuenta de servicio, instalar `google-auth` en el servidor
@@ -418,9 +419,11 @@ curl -X POST http://localhost:8000/api/v1/ordenes/1/evidencias/ -H "Authorizatio
 
 ## 7. Limitaciones conocidas
 
-- **Archivos subidos:** Django solo sirve `/media/` con `DEBUG=True`. Para la
-  demostración con `DEBUG=False` hay que configurar el servidor web (por
-  ejemplo, que Nginx o IIS sirva la carpeta `media/`).
+- **Archivos subidos:** con `DEBUG=False`, Django entrega `/media/` solo si
+  `SEMAXEL_SERVIR_MEDIA=True` (servidor de demostración). En producción real
+  debe hacerlo el servidor web (por ejemplo, Nginx o IIS).
+- **Fotos públicas por URL:** quien conozca la URL de una foto puede verla sin
+  token. Los nombres no son fáciles de adivinar, pero no son secretos.
 - **Tokens sin vencimiento:** si se pierde un celular, un administrador debe
   borrar el token desde el administrador de Django (sección Tokens).
 - **Sin modo sin conexión:** la app necesita señal para cada operación

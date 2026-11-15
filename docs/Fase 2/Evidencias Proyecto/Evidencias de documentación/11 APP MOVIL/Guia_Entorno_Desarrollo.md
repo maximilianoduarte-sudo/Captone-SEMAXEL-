@@ -17,7 +17,7 @@ Fecha de la última actualización: 14-11-2026.
 | Disco C: | Tenía **≈0,2 GB libres** al instalar las herramientas (14-11-2026); después quedó en ≈4 GB. Por eso todas las herramientas nuevas, cachés y temporales se instalaron en D:. |
 | Repositorio | `D:\proyecto_semaxel`, rama `feature/app-movil` |
 | Python | 3.13, con entorno virtual en `D:\proyecto_semaxel\venv` (no se sube a Git) |
-| MySQL | **No instalado todavía** (ver sección 2.3) |
+| MySQL | 8.4.3 LTS en `D:\herramientas-servidor\` desde el 15-11-2026 (ver la [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md)) |
 | Herramientas Android | `D:\herramientas-android\` (JDK 21, Gradle 8.11.1, SDK de Android 35) |
 | Android Studio y emulador | No instalados |
 
@@ -52,14 +52,15 @@ mínimas:
 | `SEMAXEL_PUSH_BACKEND` | `consola` | `fcm` cuando Firebase esté configurado (opcional). |
 | `FCM_CREDENTIALS_FILE` | `D:\secretos\firebase.json` | Solo con `fcm` (opcional). |
 
-El código menciona un `.env.example`, pero ese archivo no existe en el
-repositorio. Queda pendiente crearlo.
+La plantilla con todas las variables es `.env.example`, en la raíz del
+repositorio (se agregó el 15-11-2026; antes no existía).
 
 ### 2.3 Base de datos
 
-El proyecto usa MySQL 8. **Este equipo todavía no tiene MySQL**, así que
-durante el desarrollo de la API las pruebas se ejecutaron con SQLite en memoria
-mediante un archivo de configuración temporal, que no se sube a Git:
+El proyecto usa MySQL 8. Hasta el 15-11-2026 este equipo no tenía MySQL, así
+que durante el desarrollo de la API las pruebas se ejecutaron con SQLite en
+memoria mediante un archivo de configuración temporal, que no se sube a Git
+(sigue siendo útil para correr las pruebas rápido sin MySQL):
 
 ```python
 # settings_local_sqlite.py (fuera del repositorio)
@@ -88,9 +89,9 @@ venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 --settings=settings_dem
 ofertas. Al terminar muestra en la consola la contraseña común de esos
 usuarios.
 
-**Pendiente (parte 9 de la bitácora):** instalar MySQL en este equipo, crear el
-`.env`, correr `migrate` y repetir las pruebas sobre MySQL antes de abrir los
-puertos.
+**Hecho (parte 9 de la bitácora):** MySQL 8.4.3 instalado, `.env` creado,
+`migrate` aplicado y las 195 pruebas pasan sobre MySQL. El detalle está en la
+[Guía del servidor de pruebas](Guia_Servidor_Pruebas.md).
 
 ### 2.4 Comandos útiles
 
@@ -199,5 +200,5 @@ del APK al compilar:
 |---|---|---|
 | Disco C: casi lleno | Programas que escriben en C: (caché, temporales) pueden fallar. | Liberar espacio en C:; mientras tanto, usar `entorno.ps1`. |
 | Word por automatización se quedó colgado una vez | La conversión de Word a PDF para revisar los documentos falló la primera vez. | Se resolvió copiando el archivo a una ruta sin tildes antes de abrirlo. |
-| Sin MySQL | Las pruebas no se han ejecutado sobre la base real. | Instalar MySQL (parte 9). |
+| Sin MySQL (hasta el 15-11-2026) | Las pruebas no se habían ejecutado sobre la base real. | Resuelto: MySQL 8.4.3 instalado y 195 pruebas en verde. |
 | Sin emulador | La app no se ha probado en pantalla. | Probar en un celular o instalar el emulador (requiere virtualización activada en el equipo). |

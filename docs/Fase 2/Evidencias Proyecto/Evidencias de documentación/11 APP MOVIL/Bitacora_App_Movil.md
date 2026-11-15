@@ -9,9 +9,11 @@ historial de Git y esta bitácora siempre coincidan.
 - **Autor de los commits:** Sebastián Maturana, con apoyo de IA (Claude).
 - **Documentos relacionados** (en esta misma carpeta): Documento A (modelo de
   alta), Documento B (solicitud de cambio de alcance), la
-  [Guía de la API](Guia_API_App_Movil.md) y la
+  [Guía de la API](Guia_API_App_Movil.md), la
   [Guía del entorno de desarrollo](Guia_Entorno_Desarrollo.md) (cómo está
-  preparado el equipo y qué se instaló).
+  preparado el equipo y qué se instaló) y la
+  [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md) (MySQL, Waitress y
+  acceso por la red).
 - **Datos:** todos los datos de ejemplo (empresas, locales, personas) son
   hipotéticos.
 
@@ -43,13 +45,15 @@ Cada parte tiene la misma estructura:
 | 6 | Proyecto Android: base, login, navegación, Inicio y Perfil | `6813f62` (compilado en `54d81c7`) | 195 + 11 de la app | Hecho |
 | 7 | Pantallas Ofertas, Mis trabajos y Evidencias: tomar, GPS, iniciar, resolver, fotos y firma; prueba de contrato | `c1731e2` | 195 + 21 de la app | Hecho |
 | 8 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
-| 9 | Servidor de pruebas en el equipo Windows (MySQL, puertos, archivos) | — | — | Pendiente |
+| 9 | Servidor de pruebas: MySQL 8.4, Waitress, `DEBUG=False`, acceso por la red y APK para la red | `d35e859` | 195 (sobre MySQL) + 21 de la app | Hecho (falta abrir el firewall) |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
 el flujo del técnico**: ver ofertas, tomarlas, llegar con GPS, iniciar, subir
-fotos, obtener la firma y resolver. Falta: notificaciones push (requiere crear
-el proyecto de Firebase), publicar el servidor y probar en un celular.
+fotos, obtener la firma y resolver. Con la parte 9 el **servidor de pruebas**
+funciona con MySQL y `DEBUG=False` en la red local. Falta: abrir el firewall
+(Sebastián), probar en un celular y las notificaciones push (requiere crear el
+proyecto de Firebase).
 
 ---
 
@@ -549,6 +553,58 @@ pueden probar en un dispositivo (H14).
 
 ---
 
+## Parte 9: servidor de pruebas en el equipo Windows (commit `d35e859`)
+
+**Objetivo.** Dejar el equipo Windows funcionando como servidor real (MySQL,
+`DEBUG=False`, accesible por la red) para probar la app en un celular y hacer
+la demostración. El detalle completo está en la
+[Guía del servidor de pruebas](Guia_Servidor_Pruebas.md).
+
+**Qué se hizo.**
+
+| Paso | Detalle |
+|---|---|
+| MySQL 8.4.3 LTS | ZIP oficial, firma de Oracle verificada, instalado en `D:\herramientas-servidor\` (sin instalador ni servicio de Windows). Escucha solo en `127.0.0.1`. |
+| Base y usuario | Base `capstone_semaxel` (`utf8mb4`) y usuario `semaxel` con claves aleatorias; las claves quedaron en `.env` y en `D:\herramientas-servidor\credenciales\`, nunca en Git. |
+| `.env` | `DEBUG=False`, `SECRET_KEY` aleatoria, `ALLOWED_HOSTS` con la IP de la red (`192.168.100.10`). |
+| Código (commit `d35e859`) | WhiteNoise (estáticos), Waitress (servidor web en Windows), interruptor `SEMAXEL_SERVIR_MEDIA` (fotos con `DEBUG=False`) y `.env.example` (no existía). |
+| Datos | `migrate` y `seed_demo` sobre MySQL. |
+| Scripts | `iniciar-mysql.ps1` e `iniciar-servidor.ps1` en `D:\herramientas-servidor\`. |
+| APK | Compilado apuntando a `http://192.168.100.10:8000/`: `D:\herramientas-servidor\apk\SEMAXEL-Tecnico-red-local.apk`. |
+
+**Decisiones.**
+
+- **MySQL 8.4 LTS y no 8.0**: la 8.0 dejó de tener soporte en abril de 2026.
+- **MySQL solo en `127.0.0.1`**: Django está en el mismo equipo, así que la base
+  no necesita estar en la red. Solo se expone el puerto 8000 del servidor web.
+- **Waitress y no `runserver`**: `runserver` es solo para desarrollo (Django lo
+  advierte); Waitress es un servidor de producción que funciona en Windows.
+- **`DEBUG=False`**: con `True`, un error mostraría el código y la
+  configuración a cualquiera que entre.
+- **WhiteNoise para estáticos y un interruptor para las fotos**: es lo mínimo
+  para servir sin Nginx ni IIS. El interruptor viene apagado y queda
+  documentado que en producción las fotos las sirve el servidor web.
+- **La IA no tocó el firewall ni el router.** Son configuraciones de seguridad
+  del equipo: quedan a cargo de Sebastián, con los comandos en la guía.
+
+**Verificación.**
+
+- **195 de 195 pruebas de Django pasan sobre MySQL 8.4.3** (antes solo con
+  SQLite). Esto incluye las tomas de ofertas con `select_for_update`.
+- La web responde por la IP de la red con `DEBUG=False`: login real con CSRF,
+  dashboard, reportes, tickets, órdenes, ofertas, sucursales y mantenimiento.
+  Una página inexistente da 404 sin información interna.
+- **La prueba de contrato de la app pasa contra Waitress + MySQL** por la IP de
+  la red, y las fotos subidas se descargan (200, `image/jpeg`).
+- `check --deploy`: 4 avisos, todos por no tener HTTPS (esperado).
+
+**Lo que falta (a cargo de Sebastián).** Crear la regla del firewall para el
+puerto 8000 (o usar la VPN ZeroTier que ya tiene el equipo), instalar el APK en
+un celular y probar. Antes de publicar en Internet: cambiar las contraseñas de
+demostración (están en el repositorio, que es público) y considerar HTTPS.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -627,14 +683,17 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H1 | La web muestra al técnico todas las ofertas, no solo las de su especialidad (HU-09). | Por decidir |
 | H2 | En la web, "tomar oferta" se ejecuta con un enlace `GET`: un enlace malicioso podría hacer que un técnico tome una oferta sin querer. Arreglarlo exige cambiar el botón del template. | Por decidir |
 | H3 | Gerencia podía cerrar o cancelar una orden de trabajo aunque es de solo lectura. | Corregido en la parte 4 |
-| H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 9 |
+| H4 | Este equipo no tenía MySQL; las pruebas se corrían con SQLite. | Resuelto en la parte 9: 195 pruebas pasan sobre MySQL 8.4.3 |
 | H5 | Los tokens de la API no vencen; si se pierde un celular, hay que borrar el token desde el admin. | Evaluar vencimiento |
 | H6 | El registro de requisitos dice 95 pruebas (RNF-15), pero había 97 antes de este trabajo. | Corregir al actualizar requisitos |
 | H7 | El traspaso decía que las fotos completan el RF-11, pero el RF-11 es "Asignación de encargados a sucursales". | Consultar al PO |
 | H8 | En la web, si un técnico OCUPADO guarda su perfil, el formulario lo deja DISPONIBLE (el selector parte en "Disponible"). La API ya no lo permite (parte 5); la web sigue igual. | Por decidir |
-| H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 9 |
+| H9 | Django solo servía las fotos (`/media/`) con `DEBUG=True`. | Resuelto para la demo con `SEMAXEL_SERVIR_MEDIA` (parte 9); en producción, el servidor web |
 | H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
 | H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 8 |
 | H12 | La app Android no se había compilado y faltaba `gradlew`. | Resuelto: compila sin advertencias y `gradlew` está en el repositorio |
-| H14 | La app aún no se ha probado en un emulador o celular. La capa de datos sí se probó contra el servidor real (prueba de contrato, parte 7); faltan las pantallas, la cámara, el GPS y la firma. | Parte 10 |
+| H14 | La app aún no se ha probado en un emulador o celular. La capa de datos sí se probó contra el servidor real (prueba de contrato, partes 7 y 9); faltan las pantallas, la cámara, el GPS y la firma. | Parte 10 |
+| H15 | Los usuarios de `seed_demo` comparten una contraseña escrita en el repositorio, que es público. Si el servidor se publica en Internet con esos datos, cualquiera podría entrar como administrador. | Cambiar contraseñas antes de publicar |
+| H16 | El servidor funciona por HTTP: el token y las contraseñas viajan sin cifrar. | HTTPS antes de publicar en Internet |
+| H17 | Falta la regla del firewall de Windows para el puerto 8000; sin ella, otros dispositivos no llegan al servidor. La IA no modifica la seguridad del equipo. | Sebastián (comando en la Guía del servidor) |
 | H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
