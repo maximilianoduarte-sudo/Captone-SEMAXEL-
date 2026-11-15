@@ -7,9 +7,11 @@ historial de Git y esta bitácora siempre coincidan.
 
 - **Rama:** `feature/app-movil` (el código no entra a `main` hasta revisarlo).
 - **Autor de los commits:** Sebastián Maturana, con apoyo de IA (Claude).
-- **Documentos relacionados:** Documento A (modelo de alta), Documento B
-  (solicitud de cambio de alcance) y la
-  [Guía de la API](Guia_API_App_Movil.md), en esta misma carpeta.
+- **Documentos relacionados** (en esta misma carpeta): Documento A (modelo de
+  alta), Documento B (solicitud de cambio de alcance), la
+  [Guía de la API](Guia_API_App_Movil.md) y la
+  [Guía del entorno de desarrollo](Guia_Entorno_Desarrollo.md) (cómo está
+  preparado el equipo y qué se instaló).
 - **Datos:** todos los datos de ejemplo (empresas, locales, personas) son
   hipotéticos.
 
@@ -39,13 +41,15 @@ Cada parte tiene la misma estructura:
 | 4 | Mis trabajos: listar y avanzar órdenes (corrige el bug de Gerencia) | `cce1d41` | 160 | Hecho |
 | 5 | API completa: coordenadas y horario, llegada GPS, fotos, firma, disponibilidad, inicio, notificaciones push y documentación OpenAPI | `014ec6d` | 195 | Hecho |
 | 6 | Proyecto Android: base, login, navegación, Inicio y Perfil | `6813f62` (compilado en `54d81c7`) | 195 + 11 de la app | Hecho |
-| 7 | Pantallas Inicio, Ofertas y Mis trabajos | — | — | Pendiente |
-| 8 | Cámara, GPS y firma en la app | — | — | Pendiente |
-| 9 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
-| 10 | Servidor de pruebas en el equipo Windows (MySQL, puertos, archivos) | — | — | Pendiente |
+| 7 | Pantallas Ofertas, Mis trabajos y Evidencias: tomar, GPS, iniciar, resolver, fotos y firma; prueba de contrato | `c1731e2` | 195 + 21 de la app | Hecho |
+| 8 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
+| 9 | Servidor de pruebas en el equipo Windows (MySQL, puertos, archivos) | — | — | Pendiente |
+| 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
-Con la parte 5 **la API queda completa**: todo lo que la app necesita del
-servidor ya existe, está probado y documentado. Lo que sigue es la app Android.
+Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
+el flujo del técnico**: ver ofertas, tomarlas, llegar con GPS, iniciar, subir
+fotos, obtener la firma y resolver. Falta: notificaciones push (requiere crear
+el proyecto de Firebase), publicar el servidor y probar en un celular.
 
 ---
 
@@ -86,7 +90,7 @@ además será el servidor de pruebas para el celular.
   la línea base).
 
 **Pendiente.** Instalar MySQL en este equipo y repetir las pruebas sobre MySQL
-(ver parte 10).
+(ver parte 9).
 
 ---
 
@@ -452,6 +456,99 @@ emulador ni en un celular: este equipo no tiene emulador.
 
 ---
 
+## Parte 7: Ofertas, Mis trabajos y Evidencias (commit `c1731e2`)
+
+**Objetivo.** Completar las tres secciones que mostraban "próximamente" para
+que el técnico pueda hacer todo su trabajo desde la app.
+
+**Qué se agregó.**
+
+| Archivo o carpeta | Para qué |
+|---|---|
+| `ui/ofertas/` | Listado de ofertas y detalle (local, horario, mapa) con el botón **Tomar oferta** y confirmación. Al tomarla se abre la orden creada. |
+| `ui/trabajos/` | Listado de órdenes (Activos / Todos) y detalle con **Registrar llegada (GPS)**, **Iniciar** (diagnóstico y costo estimado) y **Marcar como resuelto** (trabajo, observaciones y costo final). Muestra llegada, tiempo de respuesta frente al SLA, datos del trabajo y del local. |
+| `ui/evidencias/` | Fotos de una orden (cámara o galería, cuadrícula y eliminar) y **firma de conformidad** dibujada con el dedo (`PanelFirma`). La sección Evidencias lista los trabajos abiertos. |
+| `dispositivo/Ubicacion.kt` | Pide la posición actual al GPS y abre el local en la app de mapas. |
+| `dispositivo/Imagenes.kt` | Crea el archivo temporal para la cámara y prepara la foto antes de subirla. |
+| `ui/comun/Tarjetas.kt`, `Formato.kt`, `EstadoPantalla.kt` | Tarjetas de oferta y orden, mensajes, etiquetas de prioridad, formato de fechas (hora de Chile), pesos y horario. |
+| `ui/principal/PantallaPrincipal.kt` | Rutas de detalle (`oferta/{id}`, `trabajo/{id}`, `trabajo/{id}/fotos`, `trabajo/{id}/firma`) con flecha para volver. |
+| `data/Repositorio.kt` | Todas las operaciones de la API disponibles para las pantallas. |
+| `data/local/Sesion.kt` | Interfaz del almacén del token, para probar la capa de datos sin Android. |
+| `AndroidManifest.xml`, `res/xml/rutas_archivos.xml` | Permisos de ubicación y `FileProvider` para la cámara. |
+| `gradle/libs.versions.toml` | Nuevas bibliotecas: Play Services Location, Coil (mostrar fotos) y ExifInterface. |
+
+**Cómo funciona el flujo en la app.**
+
+```mermaid
+flowchart LR
+    O["Ofertas"] -- "Tomar" --> T["Detalle del trabajo"]
+    T -- "Registrar llegada (GPS)" --> T
+    T -- "Iniciar (diagnóstico)" --> T
+    T -- "Fotos" --> F["Fotos de evidencia"]
+    T -- "Firma" --> FI["Firma del encargado"]
+    T -- "Resolver" --> R["Resuelta: el encargado cierra en la web"]
+```
+
+1. **Tomar una oferta:** se confirma en un diálogo; si otro técnico la tomó
+   antes, se muestra el motivo que envía el servidor (409).
+2. **Llegada:** al tocar el botón, la app pide permiso de ubicación (solo la
+   primera vez), obtiene una posición actual de alta precisión y la envía. El
+   servidor calcula la distancia al local y responde si la llegada quedó
+   verificada. La pantalla muestra el resultado y el tiempo de respuesta
+   frente al SLA.
+3. **Fotos:** la cámara del sistema guarda la foto en un archivo temporal de la
+   app. Antes de subirla, la app la endereza (según los datos EXIF de la
+   cámara), la reduce a 1600 px por lado y la comprime en JPEG: una foto de
+   varios MB queda en unos cientos de KB, lo que importa con datos móviles.
+4. **Firma:** el encargado escribe su nombre y firma con el dedo; la firma se
+   convierte en una imagen PNG con fondo blanco y se sube.
+5. **Botones:** cada orden trae del servidor el campo `acciones` y la pantalla
+   muestra solo esos botones. La app no repite las reglas de la máquina de
+   estados.
+
+**Decisiones.**
+
+- **La cámara del sistema, no una cámara propia.** Es más simple, funciona en
+  cualquier celular y no requiere el permiso de cámara (Android lo exige solo
+  si la app usa la cámara directamente).
+- **Posición actual, no la última conocida.** La última posición guardada
+  puede ser de horas antes y en otro lugar; para validar la llegada se pide una
+  nueva con alta precisión.
+- **El permiso de ubicación se pide al usarlo**, no al abrir la app: así el
+  técnico entiende para qué es.
+- **Las fotos se procesan en el celular antes de subirlas** (tamaño y
+  orientación), para ahorrar datos y respetar el límite de 8 MB del servidor.
+- **Coil** para mostrar fotos desde la URL: maneja caché y memoria, algo que no
+  conviene programar a mano.
+- **Interfaz `Sesion`.** La capa de datos ya no depende de DataStore (Android),
+  sino de una interfaz. En el celular se usa DataStore; en las pruebas, una
+  versión en memoria. Esto permitió la prueba de contrato.
+
+**Pruebas.**
+
+- **20 pruebas unitarias** (11 anteriores + 9 nuevas): formato de fechas en
+  hora de Chile, pesos y horario (3), tomar oferta con éxito y con 409 (2),
+  iniciar, resolver con 409, llegada y errores del celular (4).
+- **Prueba de contrato** (`ContratoApiTest`): usa la capa de datos real de la
+  app (Retrofit, modelos JSON y repositorio) contra un servidor SEMAXEL real y
+  recorre el flujo completo de un trabajo: login, inicio, ofertas, tomar (y
+  comprobar que tomarla dos veces da `no_disponible`), llegada verificada,
+  iniciar con costo, subir, eliminar y volver a subir una foto, firma,
+  resolver, y cerrar sesión (después el servidor responde 401). **Pasó** contra
+  el servidor de demostración (SQLite y `seed_demo`) el 14-11-2026. Sin
+  servidor se omite, para no romper la compilación normal.
+- Compila **sin advertencias**.
+
+**Probarlo a mano.** Ver el [README de la app](../../../../../app-movil/README.md):
+compilar con `./gradlew assembleDebug`, instalar el APK en un celular con
+`adb install` y apuntar `semaxel.apiUrl` al servidor.
+
+**Lo que no se probó.** Las pantallas no se han visto en un emulador ni en un
+celular (este equipo no tiene emulador). La cámara, el GPS y la firma solo se
+pueden probar en un dispositivo (H14).
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -530,14 +627,14 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H1 | La web muestra al técnico todas las ofertas, no solo las de su especialidad (HU-09). | Por decidir |
 | H2 | En la web, "tomar oferta" se ejecuta con un enlace `GET`: un enlace malicioso podría hacer que un técnico tome una oferta sin querer. Arreglarlo exige cambiar el botón del template. | Por decidir |
 | H3 | Gerencia podía cerrar o cancelar una orden de trabajo aunque es de solo lectura. | Corregido en la parte 4 |
-| H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 10 |
+| H4 | Este equipo no tiene MySQL; las pruebas se corren con SQLite. | Parte 9 |
 | H5 | Los tokens de la API no vencen; si se pierde un celular, hay que borrar el token desde el admin. | Evaluar vencimiento |
 | H6 | El registro de requisitos dice 95 pruebas (RNF-15), pero había 97 antes de este trabajo. | Corregir al actualizar requisitos |
 | H7 | El traspaso decía que las fotos completan el RF-11, pero el RF-11 es "Asignación de encargados a sucursales". | Consultar al PO |
 | H8 | En la web, si un técnico OCUPADO guarda su perfil, el formulario lo deja DISPONIBLE (el selector parte en "Disponible"). La API ya no lo permite (parte 5); la web sigue igual. | Por decidir |
-| H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 10 |
+| H9 | Django solo sirve las fotos (`/media/`) con `DEBUG=True`. Para la demostración hay que configurar el servidor web. | Parte 9 |
 | H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
-| H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 9 |
+| H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 8 |
 | H12 | La app Android no se había compilado y faltaba `gradlew`. | Resuelto: compila sin advertencias y `gradlew` está en el repositorio |
-| H14 | La app aún no se ha probado en un emulador o celular (solo compilación y pruebas unitarias). | Probar con el servidor de la parte 10 |
+| H14 | La app aún no se ha probado en un emulador o celular. La capa de datos sí se probó contra el servidor real (prueba de contrato, parte 7); faltan las pantallas, la cámara, el GPS y la firma. | Parte 10 |
 | H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
