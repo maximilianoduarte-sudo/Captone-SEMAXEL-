@@ -5,6 +5,7 @@ import cl.semaxel.tecnico.data.remote.ErroresApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
+import retrofit2.Response
 import java.io.IOException
 
 /** Resultado de una llamada a la API: o trae el dato, o trae un error ya explicado. */
@@ -32,4 +33,23 @@ suspend fun <T> llamarApi(bloque: suspend () -> T): Resultado<T> =
     } catch (e: SerializationException) {
         // El servidor respondió algo que la app no sabe leer (versiones distintas).
         Resultado.Fallo(ErrorApi("La respuesta del servidor no tiene el formato esperado."))
+    }
+
+/**
+ * Igual que [llamarApi], para operaciones que responden sin cuerpo (204).
+ *
+ * Retrofit no lanza excepción cuando la función devuelve `Response<Unit>`, así
+ * que aquí se revisa el código de la respuesta a mano.
+ */
+suspend fun llamarApiSinCuerpo(bloque: suspend () -> Response<Unit>): Resultado<Unit> =
+    when (val resultado = llamarApi(bloque)) {
+        is Resultado.Fallo -> resultado
+        is Resultado.Exito -> {
+            val respuesta = resultado.dato
+            if (respuesta.isSuccessful) {
+                Resultado.Exito(Unit)
+            } else {
+                Resultado.Fallo(ErroresApi.desdeRespuesta(respuesta.code(), respuesta.errorBody()?.string()))
+            }
+        }
     }

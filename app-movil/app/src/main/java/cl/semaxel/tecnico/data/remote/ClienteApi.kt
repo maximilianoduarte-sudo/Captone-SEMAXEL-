@@ -1,6 +1,6 @@
 package cl.semaxel.tecnico.data.remote
 
-import cl.semaxel.tecnico.data.local.SesionStore
+import cl.semaxel.tecnico.data.local.Sesion
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import okhttp3.Interceptor
@@ -25,7 +25,7 @@ object ClienteApi {
         explicitNulls = false
     }
 
-    fun crear(urlBase: String, sesion: SesionStore, depuracion: Boolean): SemaxelApi {
+    fun crear(urlBase: String, sesion: Sesion, depuracion: Boolean): SemaxelApi {
         val registro = HttpLoggingInterceptor().apply {
             // En depuración se ven las peticiones en Logcat, sin el token.
             level = if (depuracion) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
@@ -53,7 +53,7 @@ object ClienteApi {
  * OkHttp ejecuta los interceptores en sus propios hilos (no en el hilo de la
  * interfaz), por eso aquí se puede leer el almacén con runBlocking.
  */
-private class InterceptorToken(private val sesion: SesionStore) : Interceptor {
+private class InterceptorToken(private val sesion: Sesion) : Interceptor {
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val token = runBlocking { sesion.tokenActual() }

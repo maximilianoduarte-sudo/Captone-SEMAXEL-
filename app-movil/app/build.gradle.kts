@@ -45,6 +45,16 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Prueba de contrato contra un servidor real (ContratoApiTest): solo corre
+    // si se pasan estas propiedades con -P; si no, se omite.
+    testOptions {
+        unitTests.all { prueba ->
+            listOf("semaxel.apiContrato", "semaxel.usuarioContrato", "semaxel.claveContrato").forEach { clave ->
+                prueba.systemProperty(clave, (project.findProperty(clave) as String?) ?: "")
+            }
+        }
+    }
 }
 
 dependencies {
@@ -68,6 +78,12 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
+
+    // Ubicación (llegada con GPS), fotos (mostrar y enderezar) de la parte 7
+    implementation(libs.play.services.location)
+    implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.exifinterface)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

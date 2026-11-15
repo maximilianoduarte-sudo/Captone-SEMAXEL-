@@ -20,19 +20,19 @@ private val Context.almacenSesion: DataStore<Preferences> by preferencesDataStor
  * sesión expirada), la interfaz reacciona sola y muestra la pantalla que
  * corresponde.
  */
-class SesionStore(private val context: Context) {
+class SesionStore(private val context: Context) : Sesion {
 
     private val claveToken = stringPreferencesKey("token")
 
-    val token: Flow<String?> = context.almacenSesion.data.map { it[claveToken] }
+    override val token: Flow<String?> = context.almacenSesion.data.map { it[claveToken] }
 
-    suspend fun tokenActual(): String? = token.first()
+    override suspend fun tokenActual(): String? = token.first()
 
-    suspend fun guardar(token: String) {
+    override suspend fun guardar(token: String) {
         context.almacenSesion.edit { it[claveToken] = token }
     }
 
-    suspend fun borrar() {
+    override suspend fun borrar() {
         context.almacenSesion.edit { it.remove(claveToken) }
     }
 }

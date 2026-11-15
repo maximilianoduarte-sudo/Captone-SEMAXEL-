@@ -20,25 +20,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Inicio
-import cl.semaxel.tecnico.data.remote.Orden
 import cl.semaxel.tecnico.ui.comun.Cargando
 import cl.semaxel.tecnico.ui.comun.MensajeError
+import cl.semaxel.tecnico.ui.comun.TarjetaOrden
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
 
 @Composable
-fun PantallaInicio() {
+fun PantallaInicio(alAbrirTrabajo: (Int) -> Unit) {
     val vm = viewModelConRepositorio { InicioViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
 
     when (val e = estado) {
         EstadoCarga.Cargando -> Cargando()
         is EstadoCarga.Error -> MensajeError(e.mensaje, alReintentar = vm::cargar)
-        is EstadoCarga.Listo -> ContenidoInicio(e.dato, alActualizar = vm::cargar)
+        is EstadoCarga.Listo -> ContenidoInicio(e.dato, alActualizar = vm::cargar, alAbrirTrabajo = alAbrirTrabajo)
     }
 }
 
 @Composable
-private fun ContenidoInicio(inicio: Inicio, alActualizar: () -> Unit) {
+private fun ContenidoInicio(inicio: Inicio, alActualizar: () -> Unit, alAbrirTrabajo: (Int) -> Unit) {
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -79,7 +79,7 @@ private fun ContenidoInicio(inicio: Inicio, alActualizar: () -> Unit) {
                 )
             }
         }
-        items(inicio.ordenes, key = { it.id }) { orden -> TarjetaOrden(orden) }
+        items(inicio.ordenes, key = { it.id }) { orden -> TarjetaOrden(orden, alTocar = { alAbrirTrabajo(orden.id) }) }
     }
 }
 
@@ -97,21 +97,6 @@ private fun Indicador(titulo: String, valor: Int, modifier: Modifier = Modifier)
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(titulo, style = MaterialTheme.typography.bodyMedium)
-        }
-    }
-}
-
-@Composable
-private fun TarjetaOrden(orden: Orden) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(orden.titulo, style = MaterialTheme.typography.titleSmall)
-            Text("${orden.sucursal.nombre} · ${orden.sucursal.direccion}", style = MaterialTheme.typography.bodySmall)
-            Text(
-                "${orden.estadoDisplay} · Prioridad ${orden.prioridadDisplay}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
         }
     }
 }
