@@ -228,9 +228,15 @@ installed and usable"*. No hubo que cambiar nada de Windows ni reiniciar.
 
 **Cómo usarlo:**
 
-1. Iniciar MySQL y el servidor (scripts en `D:\herramientas-servidor\`).
-2. Iniciar el emulador: `& D:\herramientas-android\iniciar-emulador.ps1`.
-3. Compilar e instalar la app (apunta a `10.0.2.2:8000` por defecto):
+Forma rápida (desde la parte 9.4): `.\scripts\levantar-todo.ps1 -InstalarApp`
+levanta MySQL, el servidor y el emulador, y compila, instala y abre la app.
+`.\scripts\apagar-todo.ps1` apaga todo. Paso a paso:
+
+1. Iniciar MySQL y el servidor (`scripts\iniciar-mysql.ps1` y
+   `scripts\iniciar-servidor.ps1`).
+2. Iniciar el emulador: `scripts\iniciar-emulador.ps1`.
+3. Compilar e instalar la app (apunta a `10.0.2.2:8000` por defecto), con
+   `scripts\instalar-app.ps1` o a mano:
 
    ```powershell
    . D:\herramientas-android\entorno.ps1

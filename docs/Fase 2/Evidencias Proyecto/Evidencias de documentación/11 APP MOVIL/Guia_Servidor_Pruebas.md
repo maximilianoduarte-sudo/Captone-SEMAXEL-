@@ -94,7 +94,20 @@ dominio), hay que agregarla a `ALLOWED_HOSTS` y reiniciar el servidor.
 
 ## 4. Arrancar el servidor
 
-Hay dos scripts en `D:\herramientas-servidor\`. Cada uno queda abierto en su
+**Forma rápida (desde la parte 9.4):** los scripts del repositorio, en
+`scripts/`, hacen todo esto y además levantan el emulador:
+
+```powershell
+.\scripts\levantar-todo.ps1      # MySQL, servidor y emulador (o doble clic en levantar-todo.cmd)
+.\scripts\apagar-todo.ps1        # apaga todo de forma ordenada
+.\scripts\estado.ps1             # qué está corriendo y dónde entrar
+```
+
+El detalle de cada script está en el [README](../../../../../README.md). Los
+scripts antiguos de `D:\herramientas-servidor\` siguen funcionando: ahora
+solo llaman a los del repositorio.
+
+**Qué hace cada paso.** Hay dos servicios. Cada uno queda abierto en su
 propia ventana de PowerShell (al cerrarla, se detiene):
 
 1. **`iniciar-mysql.ps1`**: arranca MySQL.

@@ -50,6 +50,7 @@ Cada parte tiene la misma estructura:
 | 9.1 | Emulador de Android: instalación, primera prueba en pantalla y dos arreglos visuales | `1f2ab48` | 195 + 21 de la app | Hecho (falta recorrer todos los flujos) |
 | 9.2 | Perfil de QA (`preparar_qa`) y guía con 24 casos de prueba manuales | `6040bd6` | 201 + 21 de la app | Hecho (ampliado en la 9.3) |
 | 9.3 | Datos falsos para probar todo: 9 usuarios (todos los roles), 2 empresas, 20 tickets en todos los estados, fotos, firmas, calificaciones, SLA y mantenimiento | `4638582` | 207 + 21 de la app | Hecho (pruebas manuales en curso) |
+| 9.4 | Scripts para levantar y apagar todo y README actualizado | `38f2ead` | Scripts probados a mano | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -748,6 +749,78 @@ probar el sistema completo y no solo el flujo del técnico.
 
 ---
 
+## Parte 9.4: scripts para levantar y apagar todo (commit `38f2ead`)
+
+**Objetivo.** Sebastián pidió actualizar el README con el paso a paso para
+levantar los servicios y hacer scripts donde se pudiera, para no escribir
+tres comandos en tres ventanas cada vez.
+
+**Qué se hizo.**
+
+- Carpeta `scripts/` en el repositorio, para PowerShell de Windows:
+
+  | Script | Qué hace |
+  |---|---|
+  | `levantar-todo.ps1` / `.cmd` | Abre MySQL, el servidor y el emulador, cada uno en su ventana, y espera a que cada uno responda antes de seguir. Opciones `-SinEmulador`, `-InstalarApp` y `-Desarrollo` |
+  | `apagar-todo.ps1` / `.cmd` | Cierra el emulador (y los procesos que a veces quedan colgados), detiene el servidor y apaga MySQL con `mysqladmin shutdown` |
+  | `estado.ps1` | Qué está corriendo y las direcciones para entrar |
+  | `iniciar-mysql.ps1`, `iniciar-servidor.ps1`, `iniciar-emulador.ps1` | Cada servicio por separado |
+  | `instalar-app.ps1` | Compila la app, la instala en el emulador (o en un celular por USB) y la abre |
+  | `instalar.ps1` | Primera vez: `venv`, dependencias y `.env` con una `SECRET_KEY` nueva |
+  | `preparar-datos.ps1` | `seed_demo` y `preparar_qa`, con la clave de QA guardada fuera de Git |
+
+- `README.md` reescrito: inicio rápido, scripts, primera vez en un equipo
+  nuevo (incluida la creación de la base y su usuario), usuarios de prueba,
+  direcciones, pruebas automáticas y problemas frecuentes. También se corrigió
+  la URL del repositorio, que decía `TU_USUARIO`.
+- Los scripts antiguos de `D:\herramientas-servidor\` y
+  `D:\herramientas-android\` (fuera del repositorio) ahora solo llaman a los
+  nuevos, para que las instrucciones anteriores sigan sirviendo.
+
+**Decisiones.**
+
+- **Rutas configurables sin tocar los scripts.** Por defecto usan las del
+  equipo de pruebas (`D:\herramientas-*`). Otro integrante copia
+  `scripts/config.local.ejemplo.ps1` como `config.local.ps1` (ignorado por
+  Git) y cambia las rutas, el servicio de MySQL (`MySQL80` si lo instaló con
+  el instalador oficial) o el nombre del emulador.
+- **Una ventana por servicio**, como antes: se ve el registro de cada uno y
+  cerrar una ventana detiene solo ese servicio.
+- **No repetir lo que ya corre:** cada script revisa el puerto o el emulador
+  antes de abrir algo.
+- **Las claves no pasan por la línea de comandos:** `apagar-todo` lee la clave
+  de `root` del archivo de credenciales y se la pasa a `mysqladmin` por
+  variable de entorno, que se borra al terminar.
+- **El apagado solo detiene lo de SEMAXEL:** si el puerto 8000 lo ocupa otro
+  programa, avisa y no lo toca.
+- Los `.ps1` se guardan en UTF-8 con BOM para que Windows PowerShell 5.1 lea
+  bien los acentos.
+
+**Verificación (16-11-2026).**
+
+- `levantar-todo.ps1 -InstalarApp` con todo apagado: MySQL, servidor y
+  emulador quedaron arriba; la app se compiló, se instaló y quedó abierta en
+  primer plano (`cl.semaxel.tecnico/.MainActivity`). Swagger respondió 200.
+- Al repetirlo con todo arriba, cada paso dijo "Ya estaba corriendo".
+- `levantar-todo.ps1 -SinEmulador -Desarrollo`: la web respondió con
+  `runserver`.
+- `apagar-todo.ps1`: emulador, servidor y MySQL apagados, sin procesos
+  colgados.
+- `instalar.ps1` en este equipo (ya instalado): no cambió el `.env`.
+- `preparar-datos.ps1` **no se ejecutó**, para no reiniciar los datos de QA
+  mientras Sebastián hace las pruebas manuales. Solo llama a `seed_demo` y a
+  `preparar_qa`, que tienen sus propias pruebas.
+- Los scripts no se probaron en un equipo con MySQL instalado como servicio
+  ni con otras rutas.
+
+**Incidente.** La primera versión de `apagar-todo` leía mal el archivo con la
+clave de `root` de MySQL y el apagado falló. Al revisar el formato del
+archivo, la clave quedó visible en la salida de un comando de la sesión con
+la IA. No quedó en Git, y MySQL solo acepta conexiones desde el mismo equipo,
+pero se recomendó cambiarla (hallazgo H21).
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -843,3 +916,4 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H18 | La pestaña "Mis trabajos" se cortaba en la barra inferior. | Corregido en la parte 9.1 |
 | H19 | La dirección repetía la ciudad ("Temuco, Temuco, Temuco"). | Corregido en la parte 9.1 |
 | H20 | En `seed_demo`, las sucursales de Temuco (Centro y Mall Plaza) no tienen coordenadas: la llegada a esas sucursales queda "no verificable" y no sirve para probar el radio de 150 m. | Por decidir (agregar coordenadas hipotéticas) |
+| H21 | La clave de `root` de MySQL del servidor de pruebas quedó visible en la salida de un comando de la sesión con la IA (parte 9.4). No está en Git y MySQL solo escucha en 127.0.0.1. | Cambiar la clave de `root` |
