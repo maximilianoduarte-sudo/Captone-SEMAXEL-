@@ -5,7 +5,7 @@ técnico y cómo reproducirlo en otro equipo. Complementa la
 [Bitácora](Bitacora_App_Movil.md) (qué se hizo y por qué) y la
 [Guía de la API](Guia_API_App_Movil.md) (cómo se usa la API).
 
-Fecha de la última actualización: 14-11-2026.
+Fecha de la última actualización: 15-11-2026.
 
 ---
 
@@ -14,7 +14,7 @@ Fecha de la última actualización: 14-11-2026.
 | Elemento | Estado en el equipo Windows |
 |---|---|
 | Sistema | Windows 10 |
-| Disco C: | Tenía **≈0,2 GB libres** al instalar las herramientas (14-11-2026); después quedó en ≈4 GB. Por eso todas las herramientas nuevas, cachés y temporales se instalaron en D:. |
+| Disco C: | Tenía **≈0,2 GB libres** al instalar las herramientas (14-11-2026); después quedó en ≈4 GB y, al borrar un emulador antiguo (15-11-2026), en ≈11,7 GB. Por eso todas las herramientas nuevas, cachés y temporales se instalaron en D:. |
 | Repositorio | `D:\proyecto_semaxel`, rama `feature/app-movil` |
 | Python | 3.13, con entorno virtual en `D:\proyecto_semaxel\venv` (no se sube a Git) |
 | MySQL | 8.4.3 LTS en `D:\herramientas-servidor\` desde el 15-11-2026 (ver la [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md)) |
@@ -250,10 +250,12 @@ mouse.
 está configurado) y una cámara y un GPS reales. Conviene una pasada final en
 un celular.
 
-**Dispositivo antiguo en C:.** En `C:\Users\<usuario>\.android\avd` hay un
-emulador `Medium_Phone_API_35` de diciembre de 2024 (de una instalación
-anterior de Android Studio) que ocupa unos 5 GB en C:. No se tocó; si ya no se
-usa, Sebastián puede borrarlo para liberar espacio en C:.
+**Dispositivo antiguo en C: (borrado).** En `C:\Users\<usuario>\.android\avd`
+había un emulador `Medium_Phone_API_35` de diciembre de 2024, de una
+instalación anterior de Android Studio, que ocupaba 5,1 GB en C:. Se borró el
+15-11-2026 a pedido de Sebastián (solo esa carpeta y su `.ini`; las claves de
+`adb` y el keystore de depuración de `.android` no se tocaron). C: pasó de
+6,6 GB a 11,7 GB libres.
 
 ---
 

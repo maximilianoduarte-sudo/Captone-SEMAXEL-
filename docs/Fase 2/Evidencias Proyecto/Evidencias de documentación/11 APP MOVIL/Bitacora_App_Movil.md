@@ -644,7 +644,16 @@ advertencias.
 
 **Qué falta.** Recorrer a fondo todos los flujos en el emulador (tomar oferta,
 llegada con GPS dentro y fuera del radio, iniciar, fotos, firma, resolver,
-perfil y disponibilidad). Queda para la siguiente sesión de pruebas.
+perfil y disponibilidad). Sebastián empezó a revisarla a mano en el emulador
+el 15-11-2026.
+
+**Ojo para probar el GPS.** En los datos de demostración, solo las sucursales
+de Santiago (Providencia, Santiago Centro, Ñuñoa y Las Condes) tienen
+coordenadas. Las de Temuco (Centro y Mall Plaza) no tienen, así que una llegada
+a esas sucursales queda registrada como "no verificable" (hallazgo H20).
+
+**Limpieza.** Se borró un emulador antiguo de 2024 que ocupaba 5,1 GB en C:
+(ver la sección 3.6 de la Guía del entorno).
 
 ---
 
@@ -742,3 +751,4 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
 | H18 | La pestaña "Mis trabajos" se cortaba en la barra inferior. | Corregido en la parte 9.1 |
 | H19 | La dirección repetía la ciudad ("Temuco, Temuco, Temuco"). | Corregido en la parte 9.1 |
+| H20 | En `seed_demo`, las sucursales de Temuco (Centro y Mall Plaza) no tienen coordenadas: la llegada a esas sucursales queda "no verificable" y no sirve para probar el radio de 150 m. | Por decidir (agregar coordenadas hipotéticas) |
