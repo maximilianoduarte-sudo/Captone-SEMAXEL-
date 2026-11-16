@@ -48,7 +48,8 @@ Cada parte tiene la misma estructura:
 | 8 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
 | 9 | Servidor de pruebas: MySQL 8.4, Waitress, `DEBUG=False`, acceso por la red y APK para la red | `d35e859` | 195 (sobre MySQL) + 21 de la app | Hecho (falta abrir el firewall) |
 | 9.1 | Emulador de Android: instalación, primera prueba en pantalla y dos arreglos visuales | `1f2ab48` | 195 + 21 de la app | Hecho (falta recorrer todos los flujos) |
-| 9.2 | Perfil de QA (`preparar_qa`) y guía con 24 casos de prueba manuales | `6040bd6` | 201 + 21 de la app | Hecho (pruebas manuales en curso) |
+| 9.2 | Perfil de QA (`preparar_qa`) y guía con 24 casos de prueba manuales | `6040bd6` | 201 + 21 de la app | Hecho (ampliado en la 9.3) |
+| 9.3 | Datos falsos para probar todo: 9 usuarios (todos los roles), 2 empresas, 20 tickets en todos los estados, fotos, firmas, calificaciones, SLA y mantenimiento | `4638582` | 207 + 21 de la app | Hecho (pruebas manuales en curso) |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -697,6 +698,53 @@ las pruebas desde cero. Pedido por Sebastián el 15-11-2026.
   dos ofertas de demo de sus especialidades); no ve QA-0004 ni QA-0006; tiene
   QA-0005 como trabajo activo.
 - En la web, `qa_admin` inicia sesión y ve los tickets y órdenes de QA.
+
+---
+
+## Parte 9.3: datos falsos para probar todo (commit `4638582`)
+
+**Objetivo.** Sebastián pidió datos falsos "para todo", para que se pueda
+probar el sistema completo y no solo el flujo del técnico.
+
+**Qué se hizo.** Se amplió `preparar_qa`:
+
+| Antes (parte 9.2) | Ahora |
+|---|---|
+| 2 usuarios (`qa_tecnico`, `qa_admin`) | 9 usuarios: uno por rol (admin, gestor, encargado, gerencia), 4 técnicos en distintos estados y el admin de otra empresa |
+| 6 tickets en sucursales de demo | 20 tickets en dos empresas de QA propias, en **todos** los estados del ticket y de la orden |
+| Sin fotos, firmas ni calificaciones | Fotos y firmas reales (imágenes generadas), 4 calificaciones, 1 adjunto, SLA cumplidos, vencidos y fuera de plazo |
+| — | 5 sucursales (con y sin GPS, con y sin horario, una inactiva), 4 planes de mantenimiento y 1 ticket preventivo, 1 celular registrado |
+
+**Decisiones.**
+
+- **Empresas de QA propias** (`QA` y `QAOTRA`): así el dashboard y los
+  reportes de `qa_admin` muestran solo datos de QA, el reinicio puede borrar
+  todo lo de QA sin tocar `seed_demo`, y se prueba que una empresa no ve los
+  datos de otra.
+- **Generados con las reglas reales** (`tomar_oferta`, `registrar_llegada`,
+  `agregar_evidencia`, `registrar_firma`, `cambiar_estado_orden` y
+  `generar_tickets_preventivos`): el historial, los estados y la
+  disponibilidad de los técnicos quedan coherentes, como si alguien hubiera
+  usado el sistema.
+- **Fechas repartidas en las últimas semanas** para los trabajos terminados,
+  con un caso fuera del SLA, para que los reportes muestren algo realista.
+- **Sin notificaciones push** al preparar (se usa el modo "memoria").
+- **Números de ticket con el formato del sistema** (`QA-00001`), para que los
+  tickets creados a mano en la web sigan la misma secuencia.
+
+**Verificación.**
+
+- **207 pruebas de Django pasan sobre MySQL** (las 6 de la parte 9.2 se
+  reemplazaron por 12 que cubren el escenario completo).
+- Cargado en el servidor de pruebas. En la web, cada rol entra y ve lo que le
+  corresponde: `qa_encargado` solo sus dos sucursales y sin acceso a
+  Reportes (403); `qa_otra_admin` solo su empresa; `qa_admin` no ve la otra
+  empresa.
+- Por la API: `qa_admin` y `qa_tecnico_inactivo` no pueden entrar a la app
+  (403); cada técnico ve solo las ofertas de sus especialidades; `qa_tecnico`
+  tiene órdenes en los cinco estados; las fotos se descargan.
+- La [Guía de pruebas manuales](Guia_Pruebas_QA.md) tiene ahora 51 casos (28
+  de la app y 23 de la web), con la columna "Resultado" en blanco.
 
 ---
 
