@@ -66,7 +66,10 @@ flowchart LR
      crea Django para las pruebas).
 5. **Dónde quedaron las claves** (ninguna está en Git ni en esta guía):
    - clave de `root`: `D:\herramientas-servidor\credenciales\mysql-root.txt`;
-   - clave del usuario `semaxel` y `SECRET_KEY` de Django: `D:\proyecto_semaxel\.env`.
+   - clave del usuario `semaxel` y `SECRET_KEY` de Django: `D:\proyecto_semaxel\.env`;
+   - clave del perfil de QA (`qa_tecnico` y `qa_admin`):
+     `D:\herramientas-servidor\credenciales\qa.txt` (ver la
+     [Guía de pruebas manuales](Guia_Pruebas_QA.md)).
 
 ---
 

@@ -13,7 +13,8 @@ historial de Git y esta bitácora siempre coincidan.
   [Guía del entorno de desarrollo](Guia_Entorno_Desarrollo.md) (cómo está
   preparado el equipo y qué se instaló) y la
   [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md) (MySQL, Waitress y
-  acceso por la red).
+  acceso por la red) y la [Guía de pruebas manuales](Guia_Pruebas_QA.md)
+  (perfil de QA y casos de prueba).
 - **Datos:** todos los datos de ejemplo (empresas, locales, personas) son
   hipotéticos.
 
@@ -47,6 +48,7 @@ Cada parte tiene la misma estructura:
 | 8 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
 | 9 | Servidor de pruebas: MySQL 8.4, Waitress, `DEBUG=False`, acceso por la red y APK para la red | `d35e859` | 195 (sobre MySQL) + 21 de la app | Hecho (falta abrir el firewall) |
 | 9.1 | Emulador de Android: instalación, primera prueba en pantalla y dos arreglos visuales | `1f2ab48` | 195 + 21 de la app | Hecho (falta recorrer todos los flujos) |
+| 9.2 | Perfil de QA (`preparar_qa`) y guía con 24 casos de prueba manuales | `6040bd6` | 201 + 21 de la app | Hecho (pruebas manuales en curso) |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -654,6 +656,47 @@ a esas sucursales queda registrada como "no verificable" (hallazgo H20).
 
 **Limpieza.** Se borró un emulador antiguo de 2024 que ocupaba 5,1 GB en C:
 (ver la sección 3.6 de la Guía del entorno).
+
+---
+
+## Parte 9.2: perfil de QA para pruebas manuales (commit `6040bd6`)
+
+**Objetivo.** Que Sebastián pueda probar a mano la app y la web con un usuario
+y datos propios, sin mezclarse con los datos de demostración y pudiendo repetir
+las pruebas desde cero. Pedido por Sebastián el 15-11-2026.
+
+**Qué se hizo.**
+
+| Archivo | Cambio |
+|---|---|
+| `dashboard/management/commands/preparar_qa.py` | Comando nuevo: crea `qa_tecnico` (app) y `qa_admin` (web) y seis tickets `QA-0001` a `QA-0006`, cada uno con un caso de prueba. Cada ejecución borra los tickets `QA-` anteriores (con sus fotos y firmas) y los recrea. |
+| `dashboard/tests_preparar_qa.py` | 6 pruebas nuevas del comando. |
+| `Guia_Pruebas_QA.md` | Guía nueva: usuarios, escenario, coordenadas para el GPS y 24 casos de prueba con la columna "Resultado" en blanco. |
+
+**Decisiones.**
+
+- **Contraseña aleatoria y fuera del repositorio.** El repositorio es público
+  (hallazgo H15), así que la clave de QA no se escribe en el código: se genera
+  al crear los usuarios y se guarda en
+  `D:\herramientas-servidor\credenciales\qa.txt`.
+- **Sucursales con coordenadas.** Los tickets de QA usan Providencia, Ñuñoa y
+  Santiago Centro, que tienen latitud y longitud, para poder probar el radio
+  de 150 m (las de Temuco no tienen, hallazgo H20).
+- **Casos negativos a propósito.** `qa_tecnico` no tiene Climatización
+  (QA-0004 no debe aparecer) y QA-0006 está vencida (tampoco debe aparecer).
+- **QA-0005 ya tomada**, usando la misma regla que la app (`tomar_oferta`),
+  para probar fotos y firma sin pasar por todo el flujo.
+- **La columna "Resultado" queda en blanco.** La llena quien prueba; no se
+  completa sin haber hecho la prueba.
+
+**Verificación.**
+
+- **201 de 201 pruebas de Django pasan sobre MySQL** (195 + 6 nuevas).
+- Se ejecutó `preparar_qa` en la base del servidor de pruebas.
+- Por la API, `qa_tecnico` inicia sesión y ve QA-0001, QA-0002 y QA-0003 (más
+  dos ofertas de demo de sus especialidades); no ve QA-0004 ni QA-0006; tiene
+  QA-0005 como trabajo activo.
+- En la web, `qa_admin` inicia sesión y ve los tickets y órdenes de QA.
 
 ---
 
