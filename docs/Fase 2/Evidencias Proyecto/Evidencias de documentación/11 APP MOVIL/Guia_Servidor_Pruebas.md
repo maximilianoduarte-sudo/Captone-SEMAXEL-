@@ -78,7 +78,7 @@ El archivo `.env` (no se sube a Git; la plantilla es `.env.example`) quedó con:
 |---|---|
 | `SECRET_KEY` | aleatoria (generada con `secrets.token_urlsafe(50)`) |
 | `DEBUG` | `False` |
-| `ALLOWED_HOSTS` | `localhost,127.0.0.1,192.168.100.10` |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,192.168.100.10,10.0.2.2` (`10.0.2.2` es el computador visto desde el emulador de Android) |
 | `DB_*` | base `capstone_semaxel`, usuario `semaxel`, `127.0.0.1:3306` |
 | `SEMAXEL_SERVIR_MEDIA` | `True` |
 | `SEMAXEL_PUSH_BACKEND` | `consola` (Firebase aún no está configurado) |
@@ -142,6 +142,10 @@ contraseña común de los usuarios de prueba se muestra al terminar).
 Cambiar el firewall de Windows o el router modifica la seguridad del equipo,
 así que **no lo hizo la IA**: queda a cargo de Sebastián. Hay tres opciones,
 de la más segura a la menos segura.
+
+> **Sin abrir nada:** el emulador de Android del mismo equipo llega al
+> servidor por `10.0.2.2` sin tocar el firewall. Ver la sección 3.6 de la
+> [Guía del entorno](Guia_Entorno_Desarrollo.md).
 
 ### 6.1 Misma red Wi-Fi o cableada (recomendada para probar)
 

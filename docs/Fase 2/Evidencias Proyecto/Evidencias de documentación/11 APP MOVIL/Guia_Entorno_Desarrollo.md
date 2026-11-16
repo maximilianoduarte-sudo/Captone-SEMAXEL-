@@ -19,7 +19,8 @@ Fecha de la última actualización: 14-11-2026.
 | Python | 3.13, con entorno virtual en `D:\proyecto_semaxel\venv` (no se sube a Git) |
 | MySQL | 8.4.3 LTS en `D:\herramientas-servidor\` desde el 15-11-2026 (ver la [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md)) |
 | Herramientas Android | `D:\herramientas-android\` (JDK 21, Gradle 8.11.1, SDK de Android 35) |
-| Android Studio y emulador | No instalados |
+| Android Studio | No instalado (no hace falta) |
+| Emulador de Android | 37.2.13 con imagen Android 15 (API 35, Google APIs) desde el 15-11-2026 (ver 3.6) |
 
 ---
 
@@ -132,10 +133,11 @@ $env:JAVA_HOME = "$base\jdk\jdk-21.0.13+9"
 $env:ANDROID_HOME = "$base\sdk"
 $env:ANDROID_SDK_ROOT = "$base\sdk"
 $env:ANDROID_USER_HOME = "$base\android-user"   # en vez de C:\Users\...\.android
+$env:ANDROID_AVD_HOME = "$base\android-user\avd"   # dispositivos virtuales (15-11-2026)
 $env:GRADLE_USER_HOME = "$base\gradle-home"     # caché de Gradle fuera de C:
 $env:TEMP = "$base\tmp"
 $env:TMP = "$base\tmp"
-$env:Path = "$env:JAVA_HOME\bin;$base\gradle-8.11.1\bin;$base\sdk\cmdline-tools\latest\bin;$base\sdk\platform-tools;$env:Path"
+$env:Path = "$env:JAVA_HOME\bin;$base\gradle-8.11.1\bin;$base\sdk\cmdline-tools\latest\bin;$base\sdk\platform-tools;$base\sdk\emulator;$env:Path"
 ```
 
 ¿Por qué JDK 21 si el equipo ya tenía el JDK 25? Gradle 8.11 no puede
@@ -192,6 +194,67 @@ del APK al compilar:
 - Celular en la misma red Wi-Fi: `http://<IP del computador>:8000/`.
 - Servidor publicado: su dominio o IP pública (parte 9 de la bitácora).
 
+### 3.6 Emulador de Android (15-11-2026)
+
+Permite usar la app en pantalla sin celular y **sin abrir el firewall**: el
+emulador llega al computador por la dirección especial `10.0.2.2`, que es la
+que la app usa por defecto.
+
+**Qué se instaló** (con `sdkmanager`, en `D:\herramientas-android\sdk`):
+
+| Paquete | Versión | Tamaño | Carpeta |
+|---|---|---|---|
+| Emulador de Android | 37.2.13 | 1,1 GB | `sdk\emulator` |
+| Imagen Android 15 (API 35) con Google APIs, x86_64 | revisión 9 | 3,5 GB | `sdk\system-images\android-35\google_apis\x86_64` |
+
+Se eligió la imagen **con Google APIs** porque la app usa los servicios de
+ubicación de Google (`play-services-location`) para el GPS.
+
+**Aceleración.** El emulador necesita la virtualización del procesador. Este
+equipo (Ryzen 7 7800X3D) ya tenía activa la "Plataforma del hipervisor de
+Windows" (WHPX): `emulator -accel-check` respondió *"WHPX(10.0.19045) is
+installed and usable"*. No hubo que cambiar nada de Windows ni reiniciar.
+
+**Dispositivo virtual** `SEMAXEL_Pixel7_API35`, creado con `avdmanager` en
+`D:\herramientas-android\android-user\avd` (no en C:). Se ajustó su `config.ini`:
+
+| Ajuste | Valor | Por qué |
+|---|---|---|
+| `hw.ramSize` | 4096M | Con 1,5 GB (valor por defecto) Android 15 anda lento. |
+| `disk.dataPartition.size` | 6G | Espacio para la app y las fotos. |
+| `hw.keyboard` | yes | Escribir con el teclado del computador. |
+| `hw.gpu.enabled` | yes | Dibujo por la tarjeta de video. |
+| `hw.camera.back` | virtualscene | La cámara trasera muestra una escena 3D: sirve para probar las fotos. |
+
+**Cómo usarlo:**
+
+1. Iniciar MySQL y el servidor (scripts en `D:\herramientas-servidor\`).
+2. Iniciar el emulador: `& D:\herramientas-android\iniciar-emulador.ps1`.
+3. Compilar e instalar la app (apunta a `10.0.2.2:8000` por defecto):
+
+   ```powershell
+   . D:\herramientas-android\entorno.ps1
+   cd D:\proyecto_semaxel\app-movil
+   .\gradlew.bat installDebug
+   ```
+
+4. En el `.env` del servidor, `ALLOWED_HOSTS` debe incluir `10.0.2.2`.
+
+**Probar el GPS y la cámara:** en la barra lateral del emulador, "⋯"
+(Extended controls) → *Location* permite fijar latitud y longitud (por
+ejemplo, la de la sucursal, para probar la llegada dentro y fuera de los
+150 m). La cámara trasera muestra la escena virtual; la firma se dibuja con el
+mouse.
+
+**Lo que el emulador no reemplaza:** las notificaciones push (Firebase aún no
+está configurado) y una cámara y un GPS reales. Conviene una pasada final en
+un celular.
+
+**Dispositivo antiguo en C:.** En `C:\Users\<usuario>\.android\avd` hay un
+emulador `Medium_Phone_API_35` de diciembre de 2024 (de una instalación
+anterior de Android Studio) que ocupa unos 5 GB en C:. No se tocó; si ya no se
+usa, Sebastián puede borrarlo para liberar espacio en C:.
+
 ---
 
 ## 4. Problemas conocidos del entorno
@@ -201,4 +264,4 @@ del APK al compilar:
 | Disco C: casi lleno | Programas que escriben en C: (caché, temporales) pueden fallar. | Liberar espacio en C:; mientras tanto, usar `entorno.ps1`. |
 | Word por automatización se quedó colgado una vez | La conversión de Word a PDF para revisar los documentos falló la primera vez. | Se resolvió copiando el archivo a una ruta sin tildes antes de abrirlo. |
 | Sin MySQL (hasta el 15-11-2026) | Las pruebas no se habían ejecutado sobre la base real. | Resuelto: MySQL 8.4.3 instalado y 195 pruebas en verde. |
-| Sin emulador | La app no se ha probado en pantalla. | Probar en un celular o instalar el emulador (requiere virtualización activada en el equipo). |
+| Sin emulador (hasta el 15-11-2026) | La app no se había probado en pantalla. | Resuelto: emulador instalado (sección 3.6). |

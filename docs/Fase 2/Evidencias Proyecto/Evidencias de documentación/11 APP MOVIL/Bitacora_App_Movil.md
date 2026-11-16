@@ -46,14 +46,16 @@ Cada parte tiene la misma estructura:
 | 7 | Pantallas Ofertas, Mis trabajos y Evidencias: tomar, GPS, iniciar, resolver, fotos y firma; prueba de contrato | `c1731e2` | 195 + 21 de la app | Hecho |
 | 8 | Notificaciones push en la app (Firebase) | — | — | Pendiente |
 | 9 | Servidor de pruebas: MySQL 8.4, Waitress, `DEBUG=False`, acceso por la red y APK para la red | `d35e859` | 195 (sobre MySQL) + 21 de la app | Hecho (falta abrir el firewall) |
+| 9.1 | Emulador de Android: instalación, primera prueba en pantalla y dos arreglos visuales | `1f2ab48` | 195 + 21 de la app | Hecho (falta recorrer todos los flujos) |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
 el flujo del técnico**: ver ofertas, tomarlas, llegar con GPS, iniciar, subir
 fotos, obtener la firma y resolver. Con la parte 9 el **servidor de pruebas**
-funciona con MySQL y `DEBUG=False` en la red local. Falta: abrir el firewall
-(Sebastián), probar en un celular y las notificaciones push (requiere crear el
-proyecto de Firebase).
+funciona con MySQL y `DEBUG=False` en la red local, y con la parte 9.1 la app
+**corre en el emulador** de este mismo equipo. Falta: recorrer todos los flujos
+en el emulador, abrir el firewall (Sebastián) para probar en un celular y las
+notificaciones push (requiere crear el proyecto de Firebase).
 
 ---
 
@@ -605,6 +607,47 @@ demostración (están en el repositorio, que es público) y considerar HTTPS.
 
 ---
 
+## Parte 9.1: emulador de Android (commit `1f2ab48`)
+
+**Objetivo.** Ver la app funcionando en pantalla sin depender de un celular ni
+de abrir el firewall. Pedido por Sebastián el 15-11-2026.
+
+**Qué se hizo.**
+
+| Paso | Detalle |
+|---|---|
+| Instalación | Emulador 37.2.13 e imagen Android 15 (API 35) con Google APIs, en `D:\herramientas-android\sdk` (4,6 GB en D:). |
+| Aceleración | Ya funcionaba: `emulator -accel-check` → WHPX instalado y usable. No se cambió nada de Windows. |
+| Dispositivo virtual | `SEMAXEL_Pixel7_API35` en D:, con 4 GB de RAM y cámara trasera con escena virtual. |
+| Scripts | `entorno.ps1` suma `ANDROID_AVD_HOME` y el emulador al `PATH`; nuevo `iniciar-emulador.ps1`. |
+| Servidor | `10.0.2.2` agregado a `ALLOWED_HOSTS` en el `.env` (fuera de Git) y en la Guía del servidor. |
+
+**Primera prueba en pantalla (prueba de humo).** Con MySQL y Waitress
+corriendo, se instaló la app con `adb install`, se inició sesión con el técnico
+de demostración `cdiaz` y la pantalla de Inicio mostró los datos del servidor
+(1 oferta, 1 trabajo activo). Aparecieron dos problemas visuales, que se
+corrigieron en el mismo commit:
+
+| # | Problema | Causa | Arreglo |
+|---|---|---|---|
+| H18 | En la barra inferior, "Mis trabajos" se cortaba y se leía "Mis". | Con cinco pestañas el texto no cabe en una línea. | La pestaña dice "Trabajos"; el título de arriba sigue siendo "Mis trabajos" (`PantallaPrincipal.kt`). |
+| H19 | La dirección se mostraba "Manuel Montt 555, Temuco, Temuco, Temuco". | La dirección ya traía la ciudad y la comuna es igual a la ciudad. | `Formato.direccion` no repite la comuna ni la ciudad si ya aparecen; prueba nueva en `FormatoTest`. |
+
+Pruebas de la app: **21 unitarias pasan** (antes 20) y compila sin
+advertencias.
+
+**Evidencia** (capturas reales del emulador, carpeta `capturas/`):
+
+- `emulador_01_login.png`: pantalla de inicio de sesión.
+- `emulador_02_inicio_antes_arreglos.png`: Inicio con los dos problemas.
+- `emulador_03_inicio_despues_arreglos.png`: Inicio ya corregido.
+
+**Qué falta.** Recorrer a fondo todos los flujos en el emulador (tomar oferta,
+llegada con GPS dentro y fuera del radio, iniciar, fotos, firma, resolver,
+perfil y disponibilidad). Queda para la siguiente sesión de pruebas.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -692,8 +735,10 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H10 | El horario de la sucursal solo se edita desde el administrador de Django; falta un formulario en la web. | Por decidir |
 | H11 | Las notificaciones push quedan en modo `consola` hasta crear el proyecto en Firebase y configurar `FCM_CREDENTIALS_FILE`. | Parte 8 |
 | H12 | La app Android no se había compilado y faltaba `gradlew`. | Resuelto: compila sin advertencias y `gradlew` está en el repositorio |
-| H14 | La app aún no se ha probado en un emulador o celular. La capa de datos sí se probó contra el servidor real (prueba de contrato, partes 7 y 9); faltan las pantallas, la cámara, el GPS y la firma. | Parte 10 |
+| H14 | La app aún no se ha probado a fondo en pantalla. La capa de datos se probó contra el servidor real (prueba de contrato, partes 7 y 9) y el login e Inicio en el emulador (parte 9.1); faltan los demás flujos, la cámara, el GPS y la firma. | En curso (emulador); celular en la parte 10 |
 | H15 | Los usuarios de `seed_demo` comparten una contraseña escrita en el repositorio, que es público. Si el servidor se publica en Internet con esos datos, cualquiera podría entrar como administrador. | Cambiar contraseñas antes de publicar |
 | H16 | El servidor funciona por HTTP: el token y las contraseñas viajan sin cifrar. | HTTPS antes de publicar en Internet |
 | H17 | Falta la regla del firewall de Windows para el puerto 8000; sin ella, otros dispositivos no llegan al servidor. La IA no modifica la seguridad del equipo. | Sebastián (comando en la Guía del servidor) |
 | H13 | El token se guarda sin cifrar en el celular (DataStore). Para producción conviene cifrarlo con Android Keystore. | Evaluar |
+| H18 | La pestaña "Mis trabajos" se cortaba en la barra inferior. | Corregido en la parte 9.1 |
+| H19 | La dirección repetía la ciudad ("Temuco, Temuco, Temuco"). | Corregido en la parte 9.1 |
