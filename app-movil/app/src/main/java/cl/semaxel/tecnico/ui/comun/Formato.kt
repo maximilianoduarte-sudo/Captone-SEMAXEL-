@@ -30,9 +30,18 @@ object Formato {
         return "$" + entero.reversed().chunked(3).joinToString(".").reversed()
     }
 
+    /**
+     * "Manuel Montt 555" + comuna + ciudad -> "Manuel Montt 555, Temuco".
+     * No repite la comuna ni la ciudad si ya aparecen en el texto (muchas
+     * direcciones ya traen la ciudad y la comuna suele ser igual a la ciudad).
+     */
     fun direccion(sucursal: Sucursal): String =
         listOf(sucursal.direccion, sucursal.comuna, sucursal.ciudad)
-            .filter { it.isNotBlank() }
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .fold(emptyList<String>()) { partes, parte ->
+                if (partes.any { it.contains(parte, ignoreCase = true) }) partes else partes + parte
+            }
             .joinToString(", ")
 
     /** Horario por día; los días sin registro están cerrados. */

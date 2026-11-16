@@ -40,11 +40,15 @@ import cl.semaxel.tecnico.ui.perfil.PantallaPerfil
 import cl.semaxel.tecnico.ui.trabajos.PantallaDetalleTrabajo
 import cl.semaxel.tecnico.ui.trabajos.PantallaTrabajos
 
-/** Las cinco secciones de la app (Documento B, sección 3.3). */
-enum class Seccion(val ruta: String, val titulo: String, val icono: ImageVector) {
+/**
+ * Las cinco secciones de la app (Documento B, sección 3.3).
+ * [titulo] va en la barra superior; [etiqueta], más corta, en la barra
+ * inferior (con cinco pestañas, "Mis trabajos" no cabe y se cortaba).
+ */
+enum class Seccion(val ruta: String, val titulo: String, val icono: ImageVector, val etiqueta: String = titulo) {
     INICIO("inicio", "Inicio", Icons.Filled.Home),
     OFERTAS("ofertas", "Ofertas", Icons.Filled.Work),
-    TRABAJOS("trabajos", "Mis trabajos", Icons.Filled.Build),
+    TRABAJOS("trabajos", "Mis trabajos", Icons.Filled.Build, etiqueta = "Trabajos"),
     EVIDENCIAS("evidencias", "Evidencias", Icons.Filled.PhotoCamera),
     PERFIL("perfil", "Perfil", Icons.Filled.Person),
 }
@@ -108,7 +112,7 @@ fun PantallaPrincipal() {
                         selected = seccion == seccionActual,
                         onClick = { irASeccion(navegador, seccion) },
                         icon = { Icon(seccion.icono, contentDescription = null) },
-                        label = { Text(seccion.titulo, maxLines = 1) },
+                        label = { Text(seccion.etiqueta, maxLines = 1) },
                     )
                 }
             }
