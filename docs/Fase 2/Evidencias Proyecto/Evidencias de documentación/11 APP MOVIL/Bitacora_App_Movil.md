@@ -51,6 +51,7 @@ Cada parte tiene la misma estructura:
 | 9.2 | Perfil de QA (`preparar_qa`) y guía con 24 casos de prueba manuales | `6040bd6` | 201 + 21 de la app | Hecho (ampliado en la 9.3) |
 | 9.3 | Datos falsos para probar todo: 9 usuarios (todos los roles), 2 empresas, 20 tickets en todos los estados, fotos, firmas, calificaciones, SLA y mantenimiento | `4638582` | 207 + 21 de la app | Hecho (pruebas manuales en curso) |
 | 9.4 | Scripts para levantar y apagar todo y README actualizado | `38f2ead` | Scripts probados a mano | Hecho |
+| 9.5 | `preparar_qa --agregar-trabajos`: más trabajos para probar sin reiniciar | `554b9e1` | 209 + 21 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -818,6 +819,49 @@ clave de `root` de MySQL y el apagado falló. Al revisar el formato del
 archivo, la clave quedó visible en la salida de un comando de la sesión con
 la IA. No quedó en Git, y MySQL solo acepta conexiones desde el mismo equipo,
 pero se recomendó cambiarla (hallazgo H21).
+
+---
+
+## Parte 9.5: más trabajos para probar sin reiniciar (commit `554b9e1`)
+
+**Objetivo.** Durante las pruebas manuales, Sebastián ya había llevado todas
+las órdenes activas de `qa_tecnico` a resueltas (quedaban 6 resueltas, 3
+cerradas, 1 cancelada y ninguna activa) y pidió más trabajos.
+
+**Qué se hizo.** Opción nueva `preparar_qa --agregar-trabajos` (y
+`scripts\preparar-datos.ps1 -AgregarTrabajos`). A diferencia de
+`preparar_qa` normal, **no borra nada**: suma un lote de 8 tickets para
+`qa_tecnico`:
+
+| Estado | Cantidad | Para probar |
+|---|---|---|
+| Orden asignada | 3 | Llegada dentro del radio, fuera del radio y en sucursal sin GPS |
+| Orden en ejecución (con 2 fotos) | 2 | Fotos, firma y resolver; una con prioridad crítica |
+| Oferta disponible | 3 | Tomar ofertas; una vence en 24 horas |
+
+**Decisiones.**
+
+- **No reiniciar:** reiniciar con `preparar_qa` habría devuelto los trabajos
+  originales, pero borrando lo que Sebastián ya había probado. Con la opción
+  nueva se conserva todo y se puede repetir cuando se vuelvan a acabar.
+- **Numeración del sistema:** los tickets toman el siguiente número de la
+  empresa con la misma función que usa la web (`_proximo_numero`), así no
+  chocan con los existentes ni con los que se creen a mano.
+- **Mismas reglas que el resto:** se crean con `_crear_ticket`, que usa
+  `tomar_oferta`, `registrar_llegada`, `agregar_evidencia` y
+  `cambiar_estado_orden`. Tampoco envían notificaciones push.
+- **No toca usuarios ni clave:** si el entorno de QA no existe, avisa que hay
+  que correr `preparar_qa` primero.
+
+**Verificación (18-11-2026).**
+
+- 2 pruebas nuevas en `dashboard/tests_preparar_qa.py` (14 en total, todas
+  pasan sobre MySQL): agregar dos veces suma 16 tickets desde `QA-00019`, no
+  borra los anteriores, suma 10 órdenes activas y 6 ofertas visibles para
+  `qa_tecnico`, y no cambia la clave; sin entorno de QA, avisa.
+- Cargado en el servidor de pruebas: `QA-00019` a `QA-00026`. `qa_tecnico`
+  quedó con 3 órdenes asignadas, 2 en ejecución y 4 ofertas visibles; la app
+  en el emulador muestra "5 Trabajos activos" y "4 Ofertas para ti".
 
 ---
 

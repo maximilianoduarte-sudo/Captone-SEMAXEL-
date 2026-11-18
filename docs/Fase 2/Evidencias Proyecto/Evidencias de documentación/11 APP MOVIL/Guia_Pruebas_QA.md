@@ -111,6 +111,20 @@ cd D:\proyecto_semaxel
 - **No envía notificaciones push** mientras prepara los datos.
 - Requiere haber ejecutado `seed_demo` antes; si no, el comando lo avisa.
 
+**Se acabaron los trabajos para probar.** Cuando las pruebas ya avanzaron
+todas las órdenes activas de `qa_tecnico`, se puede sumar un lote nuevo **sin
+borrar nada** (ni lo ya probado ni la contraseña):
+
+```powershell
+.\scripts\preparar-datos.ps1 -AgregarTrabajos
+# o: .\venv\Scripts\python.exe manage.py preparar_qa --agregar-trabajos
+```
+
+Cada vez agrega 8 tickets con números nuevos (desde `QA-00019`): 3 órdenes
+asignadas (en QA Providencia, QA Ñuñoa y QA Maipú sin GPS), 2 en ejecución con
+2 fotos cada una y 3 ofertas para tomar. Se puede repetir las veces que haga
+falta. En la app, tocar **Actualizar** en Inicio para verlos.
+
 ---
 
 ## 3. Coordenadas para probar el GPS
