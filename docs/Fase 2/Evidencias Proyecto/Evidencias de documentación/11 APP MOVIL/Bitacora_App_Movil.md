@@ -1026,6 +1026,11 @@ tirarla hacia abajo desde arriba, como en las apps móviles.
   rueda desaparezca justo cuando llega la respuesta.
 - Se mantiene la recarga automática al abrir cada pestaña (parte 9.6); el
   gesto sirve para actualizar sin salir de la pantalla.
+- **Señal visible (commit `91d0daa`):** como el servidor responde en
+  milisegundos, la rueda casi no se veía. Ahora se queda al menos 0,6 s y,
+  al llegar los datos, la lista hace un parpadeo corto (baja a 30 % de
+  opacidad y vuelve). Solo al deslizar: la recarga automática al abrir una
+  pestaña no parpadea, para no distraer en cada cambio de pestaña.
 
 **Verificación (18-11-2026).** Compila y pasan las 27 pruebas de la app. En
 el emulador, tirar hacia abajo en Ofertas, Mis trabajos e Inicio hizo una
