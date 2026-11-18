@@ -32,6 +32,7 @@ data class Tecnico(
     val estado: String,
     @SerialName("estado_display") val estadoDisplay: String = "",
     val especialidades: List<String> = emptyList(),
+    val ganancias: Ganancias? = null,
 ) {
     /** El técnico solo puede cambiar su disponibilidad si no está ocupado ni inactivo. */
     val puedeCambiarDisponibilidad: Boolean
@@ -42,6 +43,14 @@ data class Tecnico(
         const val ESTADO_NO_DISPONIBLE = "NO_DISPONIBLE"
     }
 }
+
+/** Dinero generado (costo final de los trabajos terminados), en pesos. */
+@Serializable
+data class Ganancias(
+    val mes: String = "0",
+    val anio: String = "0",
+    val total: String = "0",
+)
 
 @Serializable
 data class DisponibilidadPeticion(val estado: String)

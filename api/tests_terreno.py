@@ -11,6 +11,7 @@ from datetime import time, timedelta
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 from rest_framework.authtoken.models import Token
 
@@ -240,6 +241,36 @@ class PerfilInicioYDispositivosApiTests(TerrenoBase):
         resp = self.client.patch(reverse("api:perfil"), {"estado": "NO_DISPONIBLE"}, format="json")
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.data["estado"], "NO_DISPONIBLE")
+
+    def test_perfil_muestra_ganancias_del_mes_anio_y_total(self):
+        ahora = timezone.localtime()
+        # Fechas fuera del mes y del año en curso (día 1 para no depender del día de hoy).
+        mes_pasado = ahora.replace(day=1) - timedelta(days=1)
+        anio_pasado = ahora.replace(day=1, month=1) - timedelta(days=1)
+        casos = [
+            (OrdenTrabajo.Estado.CERRADA, "10000", ahora),
+            (OrdenTrabajo.Estado.RESUELTA, "5000", ahora),
+            (OrdenTrabajo.Estado.CERRADA, "2000", mes_pasado),
+            (OrdenTrabajo.Estado.CERRADA, "1000", anio_pasado),
+            (OrdenTrabajo.Estado.CANCELADA, "999", ahora),   # no cuenta
+            (OrdenTrabajo.Estado.EN_EJECUCION, "888", ahora),  # no terminada
+        ]
+        for i, (estado, costo, fecha) in enumerate(casos):
+            ticket = Ticket.objects.create(
+                numero=f"G-{i}", titulo="x", sucursal=self.sucursal,
+                categoria=self.cat_electrica, prioridad="MEDIA", creador=self.encargado,
+            )
+            OrdenTrabajo.objects.create(
+                ticket=ticket, tecnico=self.tecnico, estado=estado,
+                costo_final=costo, fecha_fin=fecha,
+            )
+        ganancias = self.client.get(reverse("api:perfil")).data["ganancias"]
+        # mes_pasado cae en el año en curso salvo en enero.
+        anio = 15000 + (2000 if mes_pasado.year == ahora.year else 0)
+        self.assertEqual(
+            {k: float(v) for k, v in ganancias.items()},
+            {"mes": 15000.0, "anio": float(anio), "total": 18000.0},
+        )
 
     def test_estado_no_elegible_responde_400(self):
         resp = self.client.patch(reverse("api:perfil"), {"estado": "INACTIVO"}, format="json")

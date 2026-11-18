@@ -4,8 +4,12 @@ import androidx.compose.ui.graphics.Color
 import cl.semaxel.tecnico.data.remote.Horario
 import cl.semaxel.tecnico.data.remote.Sucursal
 import java.time.OffsetDateTime
+import java.time.YearMonth
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
+import java.util.Locale
 
 /** Utilidades de formato para mostrar datos de la API. */
 object Formato {
@@ -21,6 +25,20 @@ object Formato {
         } catch (e: Exception) {
             iso
         }
+    }
+
+    /** "2026-11-13T15:42:10-03:00" -> fecha y hora en Chile, o null si no se puede leer. */
+    fun instante(iso: String?): ZonedDateTime? =
+        try {
+            iso?.let { OffsetDateTime.parse(it).atZoneSameInstant(zonaChile) }
+        } catch (e: Exception) {
+            null
+        }
+
+    /** 2026-11 -> "Noviembre 2026". */
+    fun nombreMes(mes: YearMonth): String {
+        val nombre = mes.month.getDisplayName(TextStyle.FULL_STANDALONE, Locale("es", "CL"))
+        return nombre.replaceFirstChar { it.uppercase() } + " " + mes.year
     }
 
     /** "25000.00" -> "$25.000". Null -> "—". */

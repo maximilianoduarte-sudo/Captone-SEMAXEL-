@@ -4,7 +4,12 @@ Los serializers de salida describen lo que recibe la app; los de entrada
 validan lo que envía (tipos, rangos y campos obligatorios) antes de llegar a
 los servicios, que aplican las reglas de negocio.
 """
+from decimal import Decimal
+
 from django.conf import settings
+from django.db.models import Sum
+from django.utils import timezone
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from tecnicos.models import Tecnico
@@ -40,6 +45,37 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(trim_whitespace=False)
 
 
+class GananciasSerializer(serializers.Serializer):
+    """Dinero generado por el técnico: suma del costo final de sus trabajos terminados."""
+
+    mes = serializers.DecimalField(max_digits=14, decimal_places=2, help_text="Mes en curso.")
+    anio = serializers.DecimalField(max_digits=14, decimal_places=2, help_text="Año en curso.")
+    total = serializers.DecimalField(max_digits=14, decimal_places=2, help_text="Desde siempre.")
+
+
+def ganancias_de(tecnico):
+    """Suma el costo final de las órdenes RESUELTAS o CERRADAS del técnico,
+    según la fecha en que terminó el trabajo (fecha_fin, en hora de Chile).
+    Las canceladas y las que no tienen costo final no cuentan."""
+    terminadas = OrdenTrabajo.objects.filter(
+        tecnico=tecnico,
+        estado__in=[OrdenTrabajo.Estado.RESUELTA, OrdenTrabajo.Estado.CERRADA],
+        costo_final__isnull=False,
+    )
+    ahora = timezone.localtime()
+    inicio_mes = ahora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    inicio_anio = inicio_mes.replace(month=1)
+
+    def suma(consulta):
+        return consulta.aggregate(s=Sum("costo_final"))["s"] or Decimal("0")
+
+    return {
+        "mes": suma(terminadas.filter(fecha_fin__gte=inicio_mes)),
+        "anio": suma(terminadas.filter(fecha_fin__gte=inicio_anio)),
+        "total": suma(terminadas),
+    }
+
+
 class TecnicoSerializer(serializers.ModelSerializer):
     """Perfil del técnico que la app muestra en Inicio y Perfil."""
 
@@ -51,6 +87,7 @@ class TecnicoSerializer(serializers.ModelSerializer):
     especialidades = serializers.SlugRelatedField(
         many=True, read_only=True, slug_field="nombre"
     )
+    ganancias = serializers.SerializerMethodField()
 
     class Meta:
         model = Tecnico
@@ -63,7 +100,12 @@ class TecnicoSerializer(serializers.ModelSerializer):
             "estado",
             "estado_display",
             "especialidades",
+            "ganancias",
         ]
+
+    @extend_schema_field(GananciasSerializer)
+    def get_ganancias(self, tecnico):
+        return GananciasSerializer(ganancias_de(tecnico)).data
 
 
 class LoginRespuestaSerializer(serializers.Serializer):

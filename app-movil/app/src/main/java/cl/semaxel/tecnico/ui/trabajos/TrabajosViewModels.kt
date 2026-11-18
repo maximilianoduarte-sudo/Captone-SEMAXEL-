@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import cl.semaxel.tecnico.data.Repositorio
 import cl.semaxel.tecnico.data.Resultado
 import cl.semaxel.tecnico.data.remote.Orden
+import cl.semaxel.tecnico.ui.comun.Formato
+import java.math.BigDecimal
+import java.time.YearMonth
 import cl.semaxel.tecnico.ui.comun.EstadoPantalla
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,6 +17,33 @@ import kotlinx.coroutines.launch
 
 /** Estados en que la orden sigue en manos del técnico. */
 val ESTADOS_ACTIVOS = setOf("ASIGNADA", "EN_EJECUCION")
+
+/** Estados en que el trabajo está hecho y cuenta como dinero generado. */
+val ESTADOS_TERMINADOS = setOf("RESUELTA", "CERRADA")
+
+/** Un mes del historial: "Noviembre 2026", sus órdenes y lo generado (costo final de las terminadas). */
+data class MesHistorial(val titulo: String, val ordenes: List<Orden>, val total: BigDecimal)
+
+/**
+ * Agrupa las órdenes por mes (hora de Chile), del mes más reciente al más
+ * antiguo. Cada orden cuenta en el mes en que terminó (fecha_fin) o, si no
+ * terminó (cancelada), en el que se asignó. Las que no tienen fecha legible
+ * quedan al final, en "Sin fecha".
+ */
+fun historialPorMes(ordenes: List<Orden>): List<MesHistorial> {
+    fun fecha(orden: Orden) = Formato.instante(orden.fechaFin ?: orden.fechaAsignacion)
+    val (conFecha, sinFecha) = ordenes.partition { fecha(it) != null }
+    val meses = conFecha
+        .sortedByDescending { fecha(it) }
+        .groupBy { YearMonth.from(fecha(it)!!) }
+        .map { (mes, lista) -> MesHistorial(Formato.nombreMes(mes), lista, totalGenerado(lista)) }
+    return if (sinFecha.isEmpty()) meses else meses + MesHistorial("Sin fecha", sinFecha, totalGenerado(sinFecha))
+}
+
+private fun totalGenerado(ordenes: List<Orden>): BigDecimal =
+    ordenes.filter { it.estado in ESTADOS_TERMINADOS }
+        .mapNotNull { it.costoFinal?.toBigDecimalOrNull() }
+        .fold(BigDecimal.ZERO, BigDecimal::add)
 
 /**
  * Listado de órdenes del técnico (Mis trabajos y Evidencias).

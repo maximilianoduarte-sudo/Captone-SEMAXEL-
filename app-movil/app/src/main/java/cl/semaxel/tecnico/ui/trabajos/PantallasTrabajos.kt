@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -38,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Orden
 import cl.semaxel.tecnico.dispositivo.Ubicacion
+import cl.semaxel.tecnico.ui.comun.BotonWhatsApp
 import cl.semaxel.tecnico.ui.comun.Cargando
 import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Dato
@@ -52,51 +54,84 @@ import cl.semaxel.tecnico.ui.tema.VerdeOk
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
 import kotlinx.coroutines.launch
 
-/** Sección Mis trabajos: órdenes del técnico, con filtro Activos / Todos. */
+/**
+ * Sección Mis trabajos: arriba los activos y debajo el historial (terminados
+ * y cancelados) separado por mes, con lo generado en cada mes.
+ */
 @Composable
 fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
     val vm = viewModelConRepositorio { TrabajosViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
     RecargarAlMostrarse(vm::cargar)
-    var soloActivos by rememberSaveable { mutableStateOf(true) }
     val ordenes = estado.dato
 
     when {
         ordenes == null && estado.cargando -> Cargando()
         ordenes == null -> MensajeError(estado.error ?: "No se pudieron cargar tus trabajos.", vm::cargar)
         else -> {
-            val visibles = if (soloActivos) ordenes.filter { it.estado in ESTADOS_ACTIVOS } else ordenes
+            val activas = ordenes.filter { it.estado in ESTADOS_ACTIVOS }
+            val historial = historialPorMes(ordenes.filter { it.estado !in ESTADOS_ACTIVOS })
             LazyColumn(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Row(
-                        Modifier.fillMaxWidth().padding(top = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FilterChip(selected = soloActivos, onClick = { soloActivos = true }, label = { Text("Activos") })
-                        FilterChip(selected = !soloActivos, onClick = { soloActivos = false }, label = { Text("Todos") })
-                        Spacer(Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("Activos (${activas.size})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                         TextButton(onClick = vm::cargar, enabled = !estado.cargando) { Text("Actualizar") }
                     }
                 }
                 estado.error?.let { item { Mensaje(it, esError = true) } }
-                if (visibles.isEmpty()) {
+                if (activas.isEmpty()) {
                     item {
                         Text(
-                            if (soloActivos) "No tienes trabajos activos. Toma uno en la sección Ofertas."
-                            else "Todavía no tienes trabajos.",
+                            "No tienes trabajos activos. Toma uno en la sección Ofertas.",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
-                items(visibles, key = { it.id }) { orden ->
+                items(activas, key = { it.id }) { orden ->
                     TarjetaOrden(
                         orden,
                         alTocar = { alAbrirTrabajo(orden.id) },
                         pie = "Asignada ${Formato.fecha(orden.fechaAsignacion)}",
                     )
+                }
+
+                item {
+                    Text("Historial", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
+                }
+                if (historial.isEmpty()) {
+                    item {
+                        Text("Todavía no tienes trabajos terminados.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                historial.forEach { mes ->
+                    item(key = "mes-${mes.titulo}") {
+                        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                mes.titulo,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Text(
+                                "${mes.ordenes.size} trabajo(s) · ${Formato.pesos(mes.total.toPlainString())}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    items(mes.ordenes, key = { it.id }) { orden ->
+                        TarjetaOrden(
+                            orden,
+                            alTocar = { alAbrirTrabajo(orden.id) },
+                            pie = orden.fechaFin?.let { fin ->
+                                "Terminada ${Formato.fecha(fin)}" +
+                                    (orden.costoFinal?.let { " · ${Formato.pesos(it)}" } ?: "")
+                            } ?: "Asignada ${Formato.fecha(orden.fechaAsignacion)}",
+                        )
+                    }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
             }
@@ -293,7 +328,10 @@ private fun ContenidoTrabajo(
         // ---------------- local ----------------
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Local", style = MaterialTheme.typography.titleSmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Local", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    if (orden.estado in ESTADOS_ACTIVOS) BotonWhatsApp(orden)
+                }
                 Dato(orden.sucursal.nombre, Formato.direccion(orden.sucursal))
                 Dato("Empresa", orden.empresa)
                 if (orden.sucursal.telefono.isNotBlank()) Dato("Teléfono", orden.sucursal.telefono)

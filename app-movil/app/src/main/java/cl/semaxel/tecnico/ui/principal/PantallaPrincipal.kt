@@ -6,7 +6,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,7 +29,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import cl.semaxel.tecnico.ui.evidencias.PantallaEvidencias
 import cl.semaxel.tecnico.ui.evidencias.PantallaFirma
 import cl.semaxel.tecnico.ui.evidencias.PantallaFotosOrden
 import cl.semaxel.tecnico.ui.inicio.PantallaInicio
@@ -49,7 +47,6 @@ enum class Seccion(val ruta: String, val titulo: String, val icono: ImageVector,
     INICIO("inicio", "Inicio", Icons.Filled.Home),
     OFERTAS("ofertas", "Ofertas", Icons.Filled.Work),
     TRABAJOS("trabajos", "Mis trabajos", Icons.Filled.Build, etiqueta = "Trabajos"),
-    EVIDENCIAS("evidencias", "Evidencias", Icons.Filled.PhotoCamera),
     PERFIL("perfil", "Perfil", Icons.Filled.Person),
 }
 
@@ -132,12 +129,6 @@ fun PantallaPrincipal() {
             }
             composable(Seccion.TRABAJOS.ruta) {
                 PantallaTrabajos(alAbrirTrabajo = { navegador.navigate(Rutas.trabajo(it)) })
-            }
-            composable(Seccion.EVIDENCIAS.ruta) {
-                PantallaEvidencias(
-                    alAbrirFotos = { navegador.navigate(Rutas.fotos(it)) },
-                    alAbrirFirma = { navegador.navigate(Rutas.firma(it)) },
-                )
             }
             composable(Seccion.PERFIL.ruta) { PantallaPerfil() }
 

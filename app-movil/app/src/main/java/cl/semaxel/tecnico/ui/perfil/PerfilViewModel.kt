@@ -23,10 +23,8 @@ class PerfilViewModel(private val repositorio: Repositorio) : ViewModel() {
     private val _estado = MutableStateFlow(EstadoPerfil())
     val estado: StateFlow<EstadoPerfil> = _estado.asStateFlow()
 
-    init {
-        cargar()
-    }
-
+    // Se carga cada vez que la pestaña se muestra (RecargarAlMostrarse), así
+    // el dinero generado está al día después de resolver un trabajo.
     fun cargar() {
         _estado.update { it.copy(cargando = true, error = null) }
         viewModelScope.launch {

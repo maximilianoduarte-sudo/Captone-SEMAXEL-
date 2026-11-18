@@ -49,69 +49,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.dispositivo.Imagenes
 import cl.semaxel.tecnico.ui.comun.Cargando
-import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Formato
 import cl.semaxel.tecnico.ui.comun.Mensaje
 import cl.semaxel.tecnico.ui.comun.MensajeError
-import cl.semaxel.tecnico.ui.comun.TarjetaOrden
-import cl.semaxel.tecnico.ui.trabajos.TrabajosViewModel
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-
-/**
- * Sección Evidencias: órdenes que todavía admiten fotos o firma.
- * Al tocar una se abren sus fotos.
- */
-@Composable
-fun PantallaEvidencias(alAbrirFotos: (Int) -> Unit, alAbrirFirma: (Int) -> Unit) {
-    val vm = viewModelConRepositorio { TrabajosViewModel(it) }
-    val estado by vm.estado.collectAsStateWithLifecycle()
-    RecargarAlMostrarse(vm::cargar)
-    val ordenes = estado.dato?.filter { it.estado in ESTADOS_CON_EVIDENCIA }
-
-    when {
-        ordenes == null && estado.cargando -> Cargando()
-        ordenes == null -> MensajeError(estado.error ?: "No se pudieron cargar tus trabajos.", vm::cargar)
-        else -> LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Fotos y firma de tus trabajos abiertos",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = vm::cargar, enabled = !estado.cargando) { Text("Actualizar") }
-                }
-            }
-            if (ordenes.isEmpty()) {
-                item {
-                    Text(
-                        "No tienes trabajos abiertos que admitan fotos.",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            items(ordenes, key = { it.id }) { orden ->
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TarjetaOrden(
-                        orden,
-                        alTocar = { alAbrirFotos(orden.id) },
-                        pie = "${orden.evidencias.size} foto(s) · " +
-                            (orden.firma?.let { "firmada por ${it.nombreFirmante}" } ?: "sin firma"),
-                    )
-                    if ("firmar" in orden.acciones) {
-                        TextButton(onClick = { alAbrirFirma(orden.id) }) { Text("Registrar firma del encargado") }
-                    }
-                }
-            }
-            item { Spacer(Modifier.height(8.dp)) }
-        }
-    }
-}
 
 /** Fotos de una orden: tomar con la cámara, elegir de la galería y eliminar. */
 @Composable
