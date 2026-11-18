@@ -9,9 +9,18 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -30,6 +39,38 @@ fun RecargarAlMostrarse(accion: () -> Unit) {
         accionActual()
         onPauseOrDispose { }
     }
+}
+
+/**
+ * Deslizar hacia abajo para actualizar, como en las apps móviles: al tirar
+ * la lista desde arriba aparece la rueda y se vuelve a pedir el dato al
+ * servidor. [alActualizar] devuelve el Job de la carga para saber cuándo
+ * quitar la rueda.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DeslizarParaActualizar(
+    alActualizar: () -> Job,
+    modifier: Modifier = Modifier,
+    contenido: @Composable BoxScope.() -> Unit,
+) {
+    var actualizando by remember { mutableStateOf(false) }
+    val alcance = rememberCoroutineScope()
+    PullToRefreshBox(
+        isRefreshing = actualizando,
+        onRefresh = {
+            alcance.launch {
+                actualizando = true
+                try {
+                    alActualizar().join()
+                } finally {
+                    actualizando = false
+                }
+            }
+        },
+        modifier = modifier.fillMaxSize(),
+        content = contenido,
+    )
 }
 
 /** Indicador de carga centrado. */

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import cl.semaxel.tecnico.data.Repositorio
 import cl.semaxel.tecnico.data.Resultado
 import cl.semaxel.tecnico.data.remote.Inicio
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,11 +27,11 @@ class InicioViewModel(private val repositorio: Repositorio) : ViewModel() {
     private val _estado = MutableStateFlow<EstadoCarga<Inicio>>(EstadoCarga.Cargando)
     val estado: StateFlow<EstadoCarga<Inicio>> = _estado.asStateFlow()
 
-    fun cargar() {
+    fun cargar(): Job {
         // Si ya hay datos en pantalla se actualizan sin mostrar la rueda de
         // carga, para que la pantalla no parpadee cada vez que se abre.
         if (_estado.value !is EstadoCarga.Listo) _estado.value = EstadoCarga.Cargando
-        viewModelScope.launch {
+        return viewModelScope.launch {
             _estado.value = when (val resultado = repositorio.inicio()) {
                 is Resultado.Exito -> EstadoCarga.Listo(resultado.dato)
                 is Resultado.Fallo -> EstadoCarga.Error(resultado.error.mensaje)

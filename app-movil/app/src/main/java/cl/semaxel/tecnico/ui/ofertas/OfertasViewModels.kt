@@ -6,6 +6,7 @@ import cl.semaxel.tecnico.data.Repositorio
 import cl.semaxel.tecnico.data.Resultado
 import cl.semaxel.tecnico.data.remote.Oferta
 import cl.semaxel.tecnico.ui.comun.EstadoPantalla
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,9 +22,9 @@ class OfertasViewModel(private val repositorio: Repositorio) : ViewModel() {
     private val _estado = MutableStateFlow(EstadoPantalla<List<Oferta>>())
     val estado: StateFlow<EstadoPantalla<List<Oferta>>> = _estado.asStateFlow()
 
-    fun cargar() {
+    fun cargar(): Job {
         _estado.update { it.copy(cargando = true, error = null) }
-        viewModelScope.launch {
+        return viewModelScope.launch {
             when (val r = repositorio.ofertas()) {
                 is Resultado.Exito -> _estado.update { it.copy(dato = r.dato, cargando = false) }
                 is Resultado.Fallo -> _estado.update { it.copy(cargando = false, error = r.error.mensaje) }

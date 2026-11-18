@@ -21,10 +21,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Inicio
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.DeslizarParaActualizar
 import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.MensajeError
 import cl.semaxel.tecnico.ui.comun.TarjetaOrden
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
+import kotlinx.coroutines.Job
 
 @Composable
 fun PantallaInicio(alAbrirTrabajo: (Int) -> Unit) {
@@ -40,24 +42,19 @@ fun PantallaInicio(alAbrirTrabajo: (Int) -> Unit) {
 }
 
 @Composable
-private fun ContenidoInicio(inicio: Inicio, alActualizar: () -> Unit, alAbrirTrabajo: (Int) -> Unit) {
+private fun ContenidoInicio(inicio: Inicio, alActualizar: () -> Job, alAbrirTrabajo: (Int) -> Unit) =
+    DeslizarParaActualizar(alActualizar) {
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(
-                Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text("Hola, ${inicio.tecnico.nombre}", style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        inicio.tecnico.estadoDisplay,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                TextButton(onClick = alActualizar) { Text("Actualizar") }
+            Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                Text("Hola, ${inicio.tecnico.nombre}", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    inicio.tecnico.estadoDisplay,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         item {

@@ -9,6 +9,7 @@ import cl.semaxel.tecnico.ui.comun.Formato
 import java.math.BigDecimal
 import java.time.YearMonth
 import cl.semaxel.tecnico.ui.comun.EstadoPantalla
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,9 +55,9 @@ class TrabajosViewModel(private val repositorio: Repositorio) : ViewModel() {
     private val _estado = MutableStateFlow(EstadoPantalla<List<Orden>>())
     val estado: StateFlow<EstadoPantalla<List<Orden>>> = _estado.asStateFlow()
 
-    fun cargar() {
+    fun cargar(): Job {
         _estado.update { it.copy(cargando = true, error = null) }
-        viewModelScope.launch {
+        return viewModelScope.launch {
             when (val r = repositorio.ordenes()) {
                 is Resultado.Exito -> _estado.update { it.copy(dato = r.dato, cargando = false) }
                 is Resultado.Fallo -> _estado.update { it.copy(cargando = false, error = r.error.mensaje) }
@@ -80,9 +81,9 @@ class TrabajoDetalleViewModel(private val repositorio: Repositorio, private val 
         cargar()
     }
 
-    fun cargar() {
+    fun cargar(): Job {
         _estado.update { it.copy(cargando = true) }
-        viewModelScope.launch {
+        return viewModelScope.launch {
             when (val r = repositorio.orden(id)) {
                 is Resultado.Exito -> _estado.update { it.copy(dato = r.dato, cargando = false) }
                 is Resultado.Fallo -> _estado.update { it.copy(cargando = false, error = r.error.mensaje) }

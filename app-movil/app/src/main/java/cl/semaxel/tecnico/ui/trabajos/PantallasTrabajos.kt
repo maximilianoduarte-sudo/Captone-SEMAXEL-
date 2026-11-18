@@ -41,6 +41,7 @@ import cl.semaxel.tecnico.data.remote.Orden
 import cl.semaxel.tecnico.dispositivo.Ubicacion
 import cl.semaxel.tecnico.ui.comun.BotonWhatsApp
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.DeslizarParaActualizar
 import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Dato
 import cl.semaxel.tecnico.ui.comun.Etiqueta
@@ -52,6 +53,7 @@ import cl.semaxel.tecnico.ui.comun.TarjetaOrden
 import cl.semaxel.tecnico.ui.tema.RojoError
 import cl.semaxel.tecnico.ui.tema.VerdeOk
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -71,15 +73,12 @@ fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
         else -> {
             val activas = ordenes.filter { it.estado in ESTADOS_ACTIVOS }
             val historial = historialPorMes(ordenes.filter { it.estado !in ESTADOS_ACTIVOS })
-            LazyColumn(
+            DeslizarParaActualizar(vm::cargar) { LazyColumn(
                 Modifier.fillMaxSize().padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item {
-                    Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Activos (${activas.size})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                        TextButton(onClick = vm::cargar, enabled = !estado.cargando) { Text("Actualizar") }
-                    }
+                    Text("Activos (${activas.size})", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 12.dp))
                 }
                 estado.error?.let { item { Mensaje(it, esError = true) } }
                 if (activas.isEmpty()) {
@@ -134,7 +133,7 @@ fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
                     }
                 }
                 item { Spacer(Modifier.height(8.dp)) }
-            }
+            } }
         }
     }
 }
@@ -231,11 +230,11 @@ private fun ContenidoTrabajo(
     alResolver: () -> Unit,
     alAbrirEvidencias: () -> Unit,
     alAbrirFirma: () -> Unit,
-    alActualizar: () -> Unit,
+    alActualizar: () -> Job,
 ) {
     val context = LocalContext.current
     val acciones = orden.acciones
-    Column(
+    DeslizarParaActualizar(alActualizar) { Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -341,8 +340,7 @@ private fun ContenidoTrabajo(
                 }
             }
         }
-        TextButton(onClick = alActualizar) { Text("Actualizar") }
-    }
+    } }
 }
 
 /** Diálogo con un campo obligatorio y uno opcional (se usa para iniciar). */

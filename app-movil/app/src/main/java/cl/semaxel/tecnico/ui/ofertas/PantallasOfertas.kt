@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Oferta
 import cl.semaxel.tecnico.dispositivo.Ubicacion
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.DeslizarParaActualizar
 import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Dato
 import cl.semaxel.tecnico.ui.comun.EtiquetaPrioridad
@@ -52,22 +53,16 @@ fun PantallaOfertas(alAbrirOferta: (Int) -> Unit) {
     when {
         ofertas == null && estado.cargando -> Cargando()
         ofertas == null -> MensajeError(estado.error ?: "No se pudieron cargar las ofertas.", vm::cargar)
-        else -> LazyColumn(
+        else -> DeslizarParaActualizar(vm::cargar) { LazyColumn(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "${ofertas.size} oferta(s) de tus especialidades",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TextButton(onClick = vm::cargar, enabled = !estado.cargando) { Text("Actualizar") }
-                }
+                Text(
+                    "${ofertas.size} oferta(s) de tus especialidades",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
             }
             estado.error?.let { item { Mensaje(it, esError = true) } }
             if (ofertas.isEmpty()) {
@@ -82,7 +77,7 @@ fun PantallaOfertas(alAbrirOferta: (Int) -> Unit) {
                 TarjetaOferta(oferta, alTocar = { alAbrirOferta(oferta.id) })
             }
             item { Spacer(Modifier.height(8.dp)) }
-        }
+        } }
     }
 }
 
