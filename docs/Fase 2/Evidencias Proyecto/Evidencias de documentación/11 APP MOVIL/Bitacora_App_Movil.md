@@ -54,6 +54,7 @@ Cada parte tiene la misma estructura:
 | 9.5 | `preparar_qa --agregar-trabajos`: más trabajos para probar sin reiniciar | `554b9e1` | 209 + 21 de la app | Hecho |
 | 9.6 | Inicio, Ofertas y Trabajos se recargan al abrirlas; arreglo del error de "Trabajos" (consola en modo selección) | `1dffcbc` | 209 + 21 de la app | Hecho |
 | 9.7 | Android Studio Rabbit 2 en D: con script para abrirlo | `6db1dd0` | — | Hecho |
+| 9.8 | WhatsApp a la sucursal, Trabajos como historial por mes, dinero generado en Perfil y sin pestaña Evidencias | `836ae0b` | 210 + 27 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -943,6 +944,68 @@ Kotlin y Compose) y Sebastián lo aprobó.
   `C:\Users\<usuario>\.jdks` para ejecutar Gradle. Se cambió al JDK 21 de D:
   (el mismo de la consola), el script lo fija en cada apertura y la copia de
   C: se borró.
+
+---
+
+## Parte 9.8: WhatsApp, historial por mes, dinero generado y sin Evidencias (commit `836ae0b`)
+
+**Pedido.** Sebastián pidió cinco cambios después de probar la app:
+
+| Pedido | Qué se hizo |
+|---|---|
+| Botón de WhatsApp para escribirle a la sucursal cuando el técnico tomó el trabajo | Botón verde redondo con el globo de conversación junto a cada trabajo **activo** (Inicio, Mis trabajos y en el detalle, junto a "Local"). Abre `https://wa.me/<teléfono>` con un mensaje listo: "Hola, le escribe el técnico de SEMAXEL asignado al trabajo "…" en …". |
+| Que Inicio, Ofertas y Trabajos se refresquen al abrirlos | Ya estaba hecho en la parte 9.6. Ahora también Perfil (para que el dinero generado esté al día). |
+| Trabajos como historial separado por mes | Mis trabajos muestra arriba **Activos** y debajo **Historial**, agrupado por mes (del más reciente al más antiguo), con la cantidad de trabajos y lo generado en cada mes. |
+| En Perfil, el dinero generado en el mes, en el año y total | Tres métricas nuevas, calculadas por el servidor (campo `ganancias` del perfil). |
+| Quitar la pestaña Evidencias | Quitada: la barra inferior queda con 4 pestañas. Las fotos y la firma siguen en el detalle de cada trabajo, que ya tenía sus botones. |
+
+**Decisiones.**
+
+- **Dinero generado = costo final de los trabajos resueltos o cerrados**, por
+  la fecha de término (`fecha_fin`, hora de Chile). El sistema no registra
+  pagos al técnico; el costo final es el monto que el técnico declara al
+  resolver, así que es lo más cercano a "lo que generó". Las órdenes
+  canceladas o sin costo final no suman. Se calcula en el servidor
+  (`api/serializers.py`, `ganancias_de`) para que la app no repita reglas.
+- **WhatsApp por enlace `wa.me`**, sin depender de que WhatsApp esté
+  instalado: si está, se abre la conversación; si no, el navegador. El
+  teléfono de la sucursal se pasa a formato internacional chileno
+  (`+56 9 1234 5678` → `56912345678`); si no es válido, no aparece el botón.
+  Solo en trabajos activos: en el historial ya no hace falta.
+- **El logo se dibujó en la app** (globo redondo con la cola abajo a la
+  izquierda y un teléfono, en el verde de WhatsApp). No es el archivo oficial;
+  si se quiere el oficial hay que descargarlo de la guía de marca de WhatsApp.
+- **Historial:** cada trabajo cuenta en el mes en que terminó; las
+  canceladas, en el mes en que se asignaron.
+
+**Ideas para el lugar de Evidencias** (pendiente de decidir): ver el final
+de esta parte.
+
+**Verificación (18-11-2026).**
+
+- Servidor: prueba nueva `test_perfil_muestra_ganancias_del_mes_anio_y_total`
+  (mes, año y total; canceladas y en ejecución no cuentan). 210 pruebas de
+  Django en total.
+- App: 6 pruebas nuevas en `TrabajosHistorialTest` (teléfono a formato
+  internacional, enlace de WhatsApp, agrupación por mes, mes en hora de
+  Chile, lectura de `ganancias`). 27 pruebas de la app, todas pasan.
+- En el emulador con `qa_tecnico`: el botón aparece en los 5 trabajos activos
+  y abre `wa.me` con el mensaje; Mis trabajos muestra "Historial ·
+  Noviembre 2026 · 9 trabajo(s) · $5.156.000" y Octubre; Perfil muestra
+  $5.156.000 / $5.208.000 / $5.208.000. Los montos incluyen un costo final de
+  $5.000.000 que se ingresó en las pruebas manuales (QAOTRA-00002).
+- `openapi_app_movil.yaml` regenerado con el campo `ganancias`.
+
+**Ideas para reemplazar Evidencias.**
+
+1. **Mapa:** las ofertas y los trabajos activos en un mapa, para ver qué
+   queda cerca y planificar la ruta. Usa las coordenadas que ya tiene la API.
+2. **Agenda de hoy:** los trabajos del día ordenados por SLA o por distancia,
+   con el tiempo que queda para cumplir el SLA de cada uno.
+3. **Notificaciones:** bandeja con los avisos recibidos (ofertas nuevas,
+   trabajos cerrados, calificaciones). Se complementa con Firebase (parte 8).
+4. **Calificaciones:** las notas y comentarios que dejaron las sucursales al
+   cerrar los trabajos, con el promedio.
 
 ---
 

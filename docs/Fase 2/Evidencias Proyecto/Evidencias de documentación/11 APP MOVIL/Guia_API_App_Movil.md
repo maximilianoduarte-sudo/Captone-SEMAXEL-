@@ -141,10 +141,16 @@ Respuesta 200:
     "telefono": "+56 9 1111 1111",
     "estado": "DISPONIBLE",
     "estado_display": "Disponible",
-    "especialidades": ["Climatización", "Electricidad"]
+    "especialidades": ["Climatización", "Electricidad"],
+    "ganancias": {"mes": "104000.00", "anio": "360000.00", "total": "512000.00"}
   }
 }
 ```
+
+`ganancias` (desde la parte 9.8) es el dinero generado por el técnico: la
+suma del `costo_final` de sus órdenes **RESUELTAS o CERRADAS**, según la fecha
+en que terminó el trabajo (`fecha_fin`, hora de Chile): mes en curso, año en
+curso y total. Las canceladas y las que no tienen costo final no cuentan.
 
 - 400 si el usuario o la contraseña son incorrectos (mismo mensaje en ambos
   casos, para no revelar qué usuarios existen).
@@ -158,7 +164,8 @@ deje de recibir notificaciones. Responde 204 y el token deja de servir.
 
 #### `GET auth/perfil/` · Ver mi perfil
 
-Responde el objeto `tecnico` del login.
+Responde el objeto `tecnico` del login (con `ganancias`). La app lo pide
+cada vez que se abre la pestaña Perfil.
 
 #### `PATCH auth/perfil/` · Cambiar mi disponibilidad
 

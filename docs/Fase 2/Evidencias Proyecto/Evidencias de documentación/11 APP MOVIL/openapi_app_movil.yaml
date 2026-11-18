@@ -972,6 +972,30 @@ components:
       required:
       - imagen
       - nombre_firmante
+    Ganancias:
+      type: object
+      description: 'Dinero generado por el técnico: suma del costo final de sus trabajos
+        terminados.'
+      properties:
+        mes:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Mes en curso.
+        anio:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Año en curso.
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Desde siempre.
+      required:
+      - anio
+      - mes
+      - total
     Horario:
       type: object
       properties:
@@ -1376,11 +1400,16 @@ components:
           items:
             type: string
           readOnly: true
+        ganancias:
+          allOf:
+          - $ref: '#/components/schemas/Ganancias'
+          readOnly: true
       required:
       - correo
       - especialidades
       - estado
       - estado_display
+      - ganancias
       - id
       - nombre
       - username
