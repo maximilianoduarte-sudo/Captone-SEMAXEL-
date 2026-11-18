@@ -53,6 +53,7 @@ Cada parte tiene la misma estructura:
 | 9.4 | Scripts para levantar y apagar todo y README actualizado | `38f2ead` | Scripts probados a mano | Hecho |
 | 9.5 | `preparar_qa --agregar-trabajos`: más trabajos para probar sin reiniciar | `554b9e1` | 209 + 21 de la app | Hecho |
 | 9.6 | Inicio, Ofertas y Trabajos se recargan al abrirlas; arreglo del error de "Trabajos" (consola en modo selección) | `1dffcbc` | 209 + 21 de la app | Hecho |
+| 9.7 | Android Studio Rabbit 2 en D: con script para abrirlo | `6db1dd0` | — | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -912,6 +913,36 @@ ventana (Editar > Marcar).
   hicieron 5 peticiones (una por cada vez), todas con 200 y entre 11 y 58 ms.
 - Servidor reiniciado con el arreglo: 3 pares de peticiones por la misma
   conexión, todas respondidas en milisegundos.
+
+---
+
+## Parte 9.7: Android Studio (commit `6db1dd0`)
+
+**Objetivo.** Sebastián preguntó cómo hacer más eficiente el ciclo de hacer
+cambios y encontrar errores. Se recomendó Android Studio para la app (Live
+Edit, vista previa, Logcat y depurador; VS Code no tiene buen soporte para
+Kotlin y Compose) y Sebastián lo aprobó.
+
+**Qué se hizo.**
+
+- Se descargó el ZIP oficial de Android Studio Rabbit 2 (1,5 GB), se verificó
+  (SHA-256 igual al publicado y firma de Google LLC) y se descomprimió en
+  `D:\herramientas-android\android-studio`. Detalle en la Guía del entorno,
+  sección 3.7.
+- Script nuevo `scripts/abrir-android-studio.ps1` (y `.cmd`): abre Studio con
+  `app-movil`, el SDK y el emulador del equipo, la configuración y cachés en
+  D: y el JDK de D: para Gradle.
+- README: sección "Desarrollar la app en Android Studio".
+- Sebastián aceptó los avisos del primer inicio y el proyecto abrió.
+
+**Decisiones.**
+
+- **ZIP y no instalador:** no modifica Windows y queda junto al resto de las
+  herramientas en D:.
+- **Nada en C::** en la primera apertura Studio descargó un JDK de 457 MB a
+  `C:\Users\<usuario>\.jdks` para ejecutar Gradle. Se cambió al JDK 21 de D:
+  (el mismo de la consola), el script lo fija en cada apertura y la copia de
+  C: se borró.
 
 ---
 

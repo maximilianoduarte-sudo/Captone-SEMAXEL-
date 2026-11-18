@@ -19,7 +19,7 @@ Fecha de la última actualización: 15-11-2026.
 | Python | 3.13, con entorno virtual en `D:\proyecto_semaxel\venv` (no se sube a Git) |
 | MySQL | 8.4.3 LTS en `D:\herramientas-servidor\` desde el 15-11-2026 (ver la [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md)) |
 | Herramientas Android | `D:\herramientas-android\` (JDK 21, Gradle 8.11.1, SDK de Android 35) |
-| Android Studio | No instalado (no hace falta) |
+| Android Studio | Rabbit 2 (2026.2.2) en `D:\herramientas-android\android-studio` desde el 18-11-2026 (ver 3.7) |
 | Emulador de Android | 37.2.13 con imagen Android 15 (API 35, Google APIs) desde el 15-11-2026 (ver 3.6) |
 
 ---
@@ -262,6 +262,35 @@ instalación anterior de Android Studio, que ocupaba 5,1 GB en C:. Se borró el
 15-11-2026 a pedido de Sebastián (solo esa carpeta y su `.ini`; las claves de
 `adb` y el keystore de depuración de `.android` no se tocaron). C: pasó de
 6,6 GB a 11,7 GB libres.
+
+### 3.7 Android Studio (18-11-2026)
+
+Se instaló para acelerar los cambios en la app: **Live Edit** (los cambios
+visuales se ven en el emulador sin reinstalar), vista previa de pantallas,
+**Logcat** y depurador.
+
+| Qué | Dónde / cómo |
+|---|---|
+| Versión | Android Studio Rabbit 2 (2026.2.2.8, 28-10-2026), la estable más reciente |
+| Instalación | ZIP oficial descomprimido en `D:\herramientas-android\android-studio` (sin instalador: no cambia Windows) |
+| Verificación | SHA-256 `a05e6742…0fd123` igual al publicado; `studio64.exe` con firma digital válida de Google LLC |
+| Configuración, cachés y registros | `D:\herramientas-android\android-studio-datos` (por defecto irían a C:) |
+| SDK, emulador y JDK para Gradle | Los mismos de `D:\herramientas-android` (no se descargó otro SDK) |
+
+**Abrirlo siempre con `scripts\abrir-android-studio.cmd`**, no desde el menú
+Inicio. El script:
+
+1. carga `entorno.ps1` (SDK, `ANDROID_AVD_HOME` para ver el emulador de
+   SEMAXEL, `GRADLE_USER_HOME` en D:);
+2. crea `android-studio-datos\idea.properties` y apunta `STUDIO_PROPERTIES` a
+   ese archivo, para que la configuración y las cachés queden en D:;
+3. fija el JDK con que Studio ejecuta Gradle (`app-movil\.gradle\config.properties`,
+   no versionado) al JDK 21 de D:. En la primera apertura Studio había
+   descargado su propio JDK (457 MB) a `C:\Users\<usuario>\.jdks`; se cambió
+   al de D: y esa copia se borró.
+
+Los pasos para ejecutar la app desde Studio están en el README ("Desarrollar
+la app en Android Studio").
 
 ---
 
