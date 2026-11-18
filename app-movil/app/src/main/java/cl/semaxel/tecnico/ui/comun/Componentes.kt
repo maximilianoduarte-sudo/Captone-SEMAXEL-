@@ -19,7 +19,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,23 +59,35 @@ fun DeslizarParaActualizar(
     contenido: @Composable BoxScope.() -> Unit,
 ) {
     var actualizando by remember { mutableStateOf(false) }
+    val alfa = remember { Animatable(1f) }
     val alcance = rememberCoroutineScope()
     PullToRefreshBox(
         isRefreshing = actualizando,
         onRefresh = {
             alcance.launch {
                 actualizando = true
+                val inicio = System.currentTimeMillis()
                 try {
                     alActualizar().join()
+                    // El servidor suele responder en milisegundos: la rueda se
+                    // deja un mínimo para que se note que se actualizó.
+                    val resto = RUEDA_MINIMA_MS - (System.currentTimeMillis() - inicio)
+                    if (resto > 0) delay(resto)
                 } finally {
                     actualizando = false
                 }
+                // Parpadeo corto de la lista al llegar los datos nuevos.
+                alfa.animateTo(0.3f, tween(120))
+                alfa.animateTo(1f, tween(250))
             }
         },
         modifier = modifier.fillMaxSize(),
-        content = contenido,
-    )
+    ) {
+        Box(Modifier.fillMaxSize().graphicsLayer { alpha = alfa.value }) { contenido() }
+    }
 }
+
+private const val RUEDA_MINIMA_MS = 600L
 
 /** Indicador de carga centrado. */
 @Composable
