@@ -12,15 +12,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** Listado de ofertas que el técnico puede tomar (solo de sus especialidades). */
+/**
+ * Listado de ofertas que el técnico puede tomar (solo de sus especialidades).
+ * Se carga cada vez que la pestaña se muestra (ver RecargarAlMostrarse).
+ */
 class OfertasViewModel(private val repositorio: Repositorio) : ViewModel() {
 
     private val _estado = MutableStateFlow(EstadoPantalla<List<Oferta>>())
     val estado: StateFlow<EstadoPantalla<List<Oferta>>> = _estado.asStateFlow()
-
-    init {
-        cargar()
-    }
 
     fun cargar() {
         _estado.update { it.copy(cargando = true, error = null) }

@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.dispositivo.Imagenes
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Formato
 import cl.semaxel.tecnico.ui.comun.Mensaje
 import cl.semaxel.tecnico.ui.comun.MensajeError
@@ -66,6 +67,7 @@ import kotlinx.coroutines.launch
 fun PantallaEvidencias(alAbrirFotos: (Int) -> Unit, alAbrirFirma: (Int) -> Unit) {
     val vm = viewModelConRepositorio { TrabajosViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    RecargarAlMostrarse(vm::cargar)
     val ordenes = estado.dato?.filter { it.estado in ESTADOS_CON_EVIDENCIA }
 
     when {

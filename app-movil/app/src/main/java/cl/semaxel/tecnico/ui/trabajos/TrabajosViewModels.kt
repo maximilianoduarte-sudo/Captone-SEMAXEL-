@@ -15,15 +15,14 @@ import kotlinx.coroutines.launch
 /** Estados en que la orden sigue en manos del técnico. */
 val ESTADOS_ACTIVOS = setOf("ASIGNADA", "EN_EJECUCION")
 
-/** Listado de órdenes del técnico (Mis trabajos y Evidencias). */
+/**
+ * Listado de órdenes del técnico (Mis trabajos y Evidencias).
+ * Se carga cada vez que la pestaña se muestra (ver RecargarAlMostrarse).
+ */
 class TrabajosViewModel(private val repositorio: Repositorio) : ViewModel() {
 
     private val _estado = MutableStateFlow(EstadoPantalla<List<Orden>>())
     val estado: StateFlow<EstadoPantalla<List<Orden>>> = _estado.asStateFlow()
-
-    init {
-        cargar()
-    }
 
     fun cargar() {
         _estado.update { it.copy(cargando = true, error = null) }

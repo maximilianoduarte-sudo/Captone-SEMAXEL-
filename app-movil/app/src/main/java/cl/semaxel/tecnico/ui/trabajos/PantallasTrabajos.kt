@@ -39,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Orden
 import cl.semaxel.tecnico.dispositivo.Ubicacion
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Dato
 import cl.semaxel.tecnico.ui.comun.Etiqueta
 import cl.semaxel.tecnico.ui.comun.EtiquetaPrioridad
@@ -56,6 +57,7 @@ import kotlinx.coroutines.launch
 fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
     val vm = viewModelConRepositorio { TrabajosViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    RecargarAlMostrarse(vm::cargar)
     var soloActivos by rememberSaveable { mutableStateOf(true) }
     val ordenes = estado.dato
 

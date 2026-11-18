@@ -10,10 +10,27 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+
+/**
+ * Ejecuta [accion] cada vez que la pantalla queda a la vista: al abrir su
+ * pestaña, al volver desde un detalle y al volver a la app. Así las listas
+ * muestran siempre lo último del servidor sin tocar "Actualizar".
+ */
+@Composable
+fun RecargarAlMostrarse(accion: () -> Unit) {
+    val accionActual by rememberUpdatedState(accion)
+    LifecycleResumeEffect(Unit) {
+        accionActual()
+        onPauseOrDispose { }
+    }
+}
 
 /** Indicador de carga centrado. */
 @Composable

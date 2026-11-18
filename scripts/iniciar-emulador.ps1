@@ -3,6 +3,7 @@
 # http://10.0.2.2:8000/, que es el propio computador visto desde el emulador.
 . "$PSScriptRoot\_comun.ps1"
 $Host.UI.RawUI.WindowTitle = 'SEMAXEL - Emulador'
+Disable-ModoSeleccion
 Use-EntornoAndroid
 
 $serie = Get-Emulador

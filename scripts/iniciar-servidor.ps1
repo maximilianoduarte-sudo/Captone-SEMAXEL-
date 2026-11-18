@@ -6,6 +6,7 @@ param([switch]$Desarrollo)
 
 . "$PSScriptRoot\_comun.ps1"
 $Host.UI.RawUI.WindowTitle = 'SEMAXEL - Servidor web'
+Disable-ModoSeleccion
 Set-Location $Raiz
 
 if (-not (Test-Path $Python)) { throw 'Falta el entorno virtual. Ejecuta primero scripts\instalar.ps1.' }

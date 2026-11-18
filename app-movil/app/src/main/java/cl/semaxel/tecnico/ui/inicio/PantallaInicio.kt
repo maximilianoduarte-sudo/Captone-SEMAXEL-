@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Inicio
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.MensajeError
 import cl.semaxel.tecnico.ui.comun.TarjetaOrden
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
@@ -29,6 +30,7 @@ import cl.semaxel.tecnico.ui.viewModelConRepositorio
 fun PantallaInicio(alAbrirTrabajo: (Int) -> Unit) {
     val vm = viewModelConRepositorio { InicioViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    RecargarAlMostrarse(vm::cargar)
 
     when (val e = estado) {
         EstadoCarga.Cargando -> Cargando()

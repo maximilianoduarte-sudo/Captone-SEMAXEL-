@@ -17,17 +17,19 @@ sealed interface EstadoCarga<out T> {
     data class Error(val mensaje: String) : EstadoCarga<Nothing>
 }
 
+/**
+ * Resumen de la pestaña Inicio. Se carga cada vez que la pestaña se muestra
+ * (ver RecargarAlMostrarse), no al crearse.
+ */
 class InicioViewModel(private val repositorio: Repositorio) : ViewModel() {
 
     private val _estado = MutableStateFlow<EstadoCarga<Inicio>>(EstadoCarga.Cargando)
     val estado: StateFlow<EstadoCarga<Inicio>> = _estado.asStateFlow()
 
-    init {
-        cargar()
-    }
-
     fun cargar() {
-        _estado.value = EstadoCarga.Cargando
+        // Si ya hay datos en pantalla se actualizan sin mostrar la rueda de
+        // carga, para que la pantalla no parpadee cada vez que se abre.
+        if (_estado.value !is EstadoCarga.Listo) _estado.value = EstadoCarga.Cargando
         viewModelScope.launch {
             _estado.value = when (val resultado = repositorio.inicio()) {
                 is Resultado.Exito -> EstadoCarga.Listo(resultado.dato)

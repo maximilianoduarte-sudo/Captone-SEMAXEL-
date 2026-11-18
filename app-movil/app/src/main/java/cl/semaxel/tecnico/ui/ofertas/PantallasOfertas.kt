@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cl.semaxel.tecnico.data.remote.Oferta
 import cl.semaxel.tecnico.dispositivo.Ubicacion
 import cl.semaxel.tecnico.ui.comun.Cargando
+import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.Dato
 import cl.semaxel.tecnico.ui.comun.EtiquetaPrioridad
 import cl.semaxel.tecnico.ui.comun.Formato
@@ -45,6 +46,7 @@ import cl.semaxel.tecnico.ui.viewModelConRepositorio
 fun PantallaOfertas(alAbrirOferta: (Int) -> Unit) {
     val vm = viewModelConRepositorio { OfertasViewModel(it) }
     val estado by vm.estado.collectAsStateWithLifecycle()
+    RecargarAlMostrarse(vm::cargar)
     val ofertas = estado.dato
 
     when {

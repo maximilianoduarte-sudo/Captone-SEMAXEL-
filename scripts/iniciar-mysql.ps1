@@ -2,6 +2,7 @@
 # (Ctrl+C o apagar-todo.ps1 lo detienen). Con el servicio de Windows, lo inicia.
 . "$PSScriptRoot\_comun.ps1"
 $Host.UI.RawUI.WindowTitle = 'SEMAXEL - MySQL'
+Disable-ModoSeleccion
 
 if (Test-Puerto $Semaxel.PuertoMysql) {
     Write-Ok "MySQL ya está corriendo (puerto $($Semaxel.PuertoMysql))."

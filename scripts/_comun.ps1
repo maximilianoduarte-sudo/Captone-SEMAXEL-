@@ -86,6 +86,27 @@ function Start-Ventana([string]$script, [string[]]$argumentos = @()) {
     Start-Process powershell.exe -ArgumentList $lista -WorkingDirectory $Raiz | Out-Null
 }
 
+# Desactiva el "modo selección" (QuickEdit) de esta ventana. Si se hace clic
+# en una consola con ese modo, Windows congela la salida del programa: el
+# servidor se queda trabado al escribir su registro y la app recibe timeouts.
+# Para copiar texto queda el menú de la ventana (Editar > Marcar).
+function Disable-ModoSeleccion {
+    if (-not ('SemaxelConsola.Nativo' -as [type])) {
+        Add-Type -Namespace SemaxelConsola -Name Nativo -MemberDefinition @'
+[DllImport("kernel32.dll")] public static extern System.IntPtr GetStdHandle(int h);
+[DllImport("kernel32.dll")] public static extern bool GetConsoleMode(System.IntPtr h, out uint m);
+[DllImport("kernel32.dll")] public static extern bool SetConsoleMode(System.IntPtr h, uint m);
+'@
+    }
+    $entrada = [SemaxelConsola.Nativo]::GetStdHandle(-10)
+    $modo = [uint32]0
+    if ([SemaxelConsola.Nativo]::GetConsoleMode($entrada, [ref]$modo)) {
+        # Quita ENABLE_QUICK_EDIT_MODE (0x40) y deja ENABLE_EXTENDED_FLAGS (0x80).
+        $nuevo = [uint32]((([int64]$modo) -band 4294967231) -bor 0x80)
+        [void][SemaxelConsola.Nativo]::SetConsoleMode($entrada, $nuevo)
+    }
+}
+
 # IP del equipo en la red local (para entrar desde otro PC o un celular).
 # Solo las tarjetas con puerta de enlace: así no aparecen las redes virtuales.
 function Get-IpLocal {
