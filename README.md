@@ -109,6 +109,7 @@ Todos están en `scripts/` y se ejecutan desde PowerShell en Windows.
 | `iniciar-servidor.ps1` | Solo el servidor web y la API (`-Desarrollo` para `runserver`) |
 | `iniciar-emulador.ps1` | Solo el emulador |
 | `instalar-app.ps1` | Compila la app de depuración, la instala en el emulador (o en un celular por USB) y la abre. `-SinCompilar` instala el último APK |
+| `abrir-android-studio.ps1` / `.cmd` | Abre Android Studio con `app-movil`, el SDK y el emulador del equipo, y sus cachés en D: (ver [Desarrollar la app en Android Studio](#desarrollar-la-app-en-android-studio)) |
 
 Las rutas por defecto son las del equipo de pruebas: MySQL portable en
 `D:\herramientas-servidor` y herramientas de Android en
@@ -193,6 +194,22 @@ python manage.py runserver 0.0.0.0:8000
 
 La `SECRET_KEY` se genera con
 `python -c "import secrets; print(secrets.token_urlsafe(50))"`.
+
+## Desarrollar la app en Android Studio
+
+1. Levantar el servidor: `.\scripts\levantar-todo.ps1` (el emulador también
+   se puede abrir desde el **Device Manager** de Studio).
+2. Abrir Studio con `scripts\abrir-android-studio.cmd`. **No abrirlo desde el
+   menú Inicio:** el script le indica dónde están el SDK, el JDK y el emulador,
+   y guarda sus cachés en D:.
+3. Esperar a que termine el **Gradle Sync** (barra inferior).
+4. Elegir la configuración **app** y el dispositivo **SEMAXEL_Pixel7_API35**,
+   y presionar **Run ▶** (Shift+F10). Con el bicho (Shift+F9) se depura con
+   puntos de interrupción.
+5. **Live Edit:** con la app corriendo, los cambios en las pantallas (textos,
+   colores, márgenes) se ven en el emulador sin reinstalar. Los cambios en la
+   lógica se aplican con **Apply Changes** (Ctrl+F10) o volviendo a ejecutar.
+6. **Logcat** (barra inferior) muestra los registros y errores de la app.
 
 ## Usuarios de prueba
 

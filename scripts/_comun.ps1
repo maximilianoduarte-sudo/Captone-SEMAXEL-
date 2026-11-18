@@ -17,6 +17,7 @@ $Semaxel = @{
     PuertoMysql          = 3306
     MysqlBin             = $null                        # se calcula abajo si queda vacío
     Credenciales         = $null                        # carpeta de claves (fuera del repo)
+    AndroidStudio        = $null                        # carpeta de Android Studio (por defecto, dentro de HerramientasAndroid)
 }
 
 $configLocal = Join-Path $PSScriptRoot 'config.local.ps1'
@@ -28,6 +29,7 @@ if (-not $Semaxel.MysqlBin) {
     if ($mysqlDir) { $Semaxel.MysqlBin = Join-Path $mysqlDir.FullName 'bin' }
 }
 if (-not $Semaxel.Credenciales) { $Semaxel.Credenciales = Join-Path $Semaxel.HerramientasServidor 'credenciales' }
+if (-not $Semaxel.AndroidStudio) { $Semaxel.AndroidStudio = Join-Path $Semaxel.HerramientasAndroid 'android-studio' }
 
 $Python = Join-Path $Raiz 'venv\Scripts\python.exe'
 $PaqueteApp = 'cl.semaxel.tecnico'

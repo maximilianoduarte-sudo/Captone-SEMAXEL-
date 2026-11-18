@@ -9,6 +9,9 @@ $Semaxel.HerramientasServidor = 'C:\semaxel\herramientas-servidor'
 # Herramientas de Android (con entorno.ps1). Si no existe, se usa ANDROID_HOME.
 $Semaxel.HerramientasAndroid = 'C:\semaxel\herramientas-android'
 
+# Carpeta de Android Studio (ZIP descomprimido).
+$Semaxel.AndroidStudio = 'C:\semaxel\android-studio'
+
 # Nombre del servicio de MySQL instalado con el instalador oficial.
 $Semaxel.ServicioMysql = 'MySQL80'
 
