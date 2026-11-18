@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.dp
 import cl.semaxel.tecnico.data.remote.Oferta
 import cl.semaxel.tecnico.data.remote.Orden
 import cl.semaxel.tecnico.ui.tema.VerdeOk
-import cl.semaxel.tecnico.ui.trabajos.ESTADOS_ACTIVOS
 
 /** Etiqueta de color con la prioridad del ticket. */
 @Composable
@@ -89,10 +88,7 @@ fun TarjetaOferta(oferta: Oferta, alTocar: () -> Unit) {
     }
 }
 
-/**
- * Tarjeta de una orden de trabajo en los listados. Si la orden está activa
- * (asignada o en ejecución) muestra al lado el botón de WhatsApp de la sucursal.
- */
+/** Tarjeta de una orden de trabajo en los listados. */
 @Composable
 fun TarjetaOrden(orden: Orden, alTocar: (() -> Unit)? = null, pie: String? = null) {
     val contenido: @Composable () -> Unit = {
@@ -104,7 +100,6 @@ fun TarjetaOrden(orden: Orden, alTocar: (() -> Unit)? = null, pie: String? = nul
             ) {
                 Text(orden.titulo, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 EtiquetaPrioridad(orden.prioridad, orden.prioridadDisplay)
-                if (orden.estado in ESTADOS_ACTIVOS) BotonWhatsApp(orden)
             }
             Text(
                 "${orden.sucursal.nombre} · ${Formato.direccion(orden.sucursal)}",

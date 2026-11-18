@@ -953,7 +953,7 @@ Kotlin y Compose) y Sebastián lo aprobó.
 
 | Pedido | Qué se hizo |
 |---|---|
-| Botón de WhatsApp para escribirle a la sucursal cuando el técnico tomó el trabajo | Botón verde redondo con el globo de conversación junto a cada trabajo **activo** (Inicio, Mis trabajos y en el detalle, junto a "Local"). Abre `https://wa.me/<teléfono>` con un mensaje listo: "Hola, le escribe el técnico de SEMAXEL asignado al trabajo "…" en …". |
+| Botón de WhatsApp para escribirle a la sucursal cuando el técnico tomó el trabajo | Botón verde redondo con el globo de conversación en el **detalle** de cada trabajo activo, junto a "Local". (En la primera versión también estaba en las tarjetas de Inicio y Mis trabajos; Sebastián pidió dejarlo solo en el detalle.) Abre `https://wa.me/<teléfono>` con un mensaje listo: "Hola, le escribe el técnico de SEMAXEL asignado al trabajo "…" en …". |
 | Que Inicio, Ofertas y Trabajos se refresquen al abrirlos | Ya estaba hecho en la parte 9.6. Ahora también Perfil (para que el dinero generado esté al día). |
 | Trabajos como historial separado por mes | Mis trabajos muestra arriba **Activos** y debajo **Historial**, agrupado por mes (del más reciente al más antiguo), con la cantidad de trabajos y lo generado en cada mes. |
 | En Perfil, el dinero generado en el mes, en el año y total | Tres métricas nuevas, calculadas por el servidor (campo `ganancias` del perfil). |
@@ -989,8 +989,8 @@ de esta parte.
 - App: 6 pruebas nuevas en `TrabajosHistorialTest` (teléfono a formato
   internacional, enlace de WhatsApp, agrupación por mes, mes en hora de
   Chile, lectura de `ganancias`). 27 pruebas de la app, todas pasan.
-- En el emulador con `qa_tecnico`: el botón aparece en los 5 trabajos activos
-  y abre `wa.me` con el mensaje; Mis trabajos muestra "Historial ·
+- En el emulador con `qa_tecnico`: el botón aparece en el detalle de los
+  trabajos activos (no en las listas) y abre `wa.me` con el mensaje; Mis trabajos muestra "Historial ·
   Noviembre 2026 · 9 trabajo(s) · $5.156.000" y Octubre; Perfil muestra
   $5.156.000 / $5.208.000 / $5.208.000. Los montos incluyen un costo final de
   $5.000.000 que se ingresó en las pruebas manuales (QAOTRA-00002).
