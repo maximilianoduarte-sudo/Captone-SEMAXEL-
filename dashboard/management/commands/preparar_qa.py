@@ -34,10 +34,15 @@ queda en el repositorio: se genera al crear los usuarios (o con
 Requiere haber ejecutado ``seed_demo`` antes (especialidades, categorías y
 políticas SLA).
 
+Con ``--agregar-trabajos`` no borra nada: suma un lote de trabajos nuevos
+para ``qa_tecnico`` (asignados, en ejecución y ofertas) a los que ya existen.
+Sirve cuando las pruebas ya avanzaron todos los trabajos activos.
+
 Uso:
     python manage.py preparar_qa
     python manage.py preparar_qa --archivo-clave D:\\herramientas-servidor\\credenciales\\qa.txt
     python manage.py preparar_qa --nueva-clave
+    python manage.py preparar_qa --agregar-trabajos
 """
 
 import io
@@ -66,6 +71,7 @@ from ofertas.services import tomar_oferta
 from sla.models import SLAPolicy
 from sucursales.models import HorarioSucursal, Sucursal
 from tecnicos.models import Especialidad, Tecnico
+from tickets.views import _proximo_numero  # misma numeración que la web
 from tickets.models import (
     Calificacion,
     Categoria,
@@ -221,6 +227,35 @@ TICKETS = [
          prueba="App: los técnicos ven ofertas de cualquier empresa; muestra 'QA Otra Empresa'."),
 ]
 
+# Lote que suma --agregar-trabajos (sin "n": el número lo da el sistema, como
+# en la web). Cada ejecución agrega otro lote igual con números nuevos.
+TRABAJOS_EXTRA = [
+    dict(titulo="[QA] Cortocircuito en vitrina refrigerada", suc="QPR", cat="Fallo eléctrico",
+         prio="ALTA", flujo="asignada", tecnico="qa_tecnico",
+         prueba="App: orden asignada; llegar dentro del radio, iniciar, fotos, firma y resolver."),
+    dict(titulo="[QA] Filtración en techo de bodega", suc="QNU", cat="Fuga de agua",
+         prio="MEDIA", flujo="asignada", tecnico="qa_tecnico",
+         prueba="App: orden asignada; probar la llegada fuera del radio."),
+    dict(titulo="[QA] Desagüe tapado en cocina", suc="QMA", cat="Plomería",
+         prio="BAJA", flujo="asignada", tecnico="qa_tecnico",
+         prueba="App: orden asignada en sucursal sin GPS (llegada no verificable)."),
+    dict(titulo="[QA] Baldosas sueltas en pasillo", suc="QSC", cat="Infraestructura / Obra",
+         prio="MEDIA", flujo="ejecucion", tecnico="qa_tecnico", llegada="dentro",
+         prueba="App: en ejecución con 2 fotos; agregar o borrar fotos, firmar y resolver."),
+    dict(titulo="[QA] Enchufes sin tierra en caja 4", suc="QPR", cat="Fallo eléctrico",
+         prio="CRITICA", flujo="ejecucion", tecnico="qa_tecnico", llegada="dentro",
+         prueba="App: en ejecución, prioridad crítica (SLA corto)."),
+    dict(titulo="[QA] Foco de estacionamiento intermitente", suc="QNU", cat="Fallo eléctrico",
+         prio="BAJA", flujo="oferta", horas=72,
+         prueba="App: oferta disponible para tomar."),
+    dict(titulo="[QA] Estanque de WC que no carga", suc="QSC", cat="Plomería",
+         prio="MEDIA", flujo="oferta", horas=48,
+         prueba="App: oferta disponible para tomar."),
+    dict(titulo="[QA] Puerta de bodega descuadrada", suc="QPR", cat="Infraestructura / Obra",
+         prio="ALTA", flujo="oferta", horas=24,
+         prueba="App: oferta disponible, vence en 24 horas."),
+]
+
 # nombre, sucursal, categoría, frecuencia, días hasta la próxima ejecución, activo
 PLANES = [
     ("[QA] Revisión mensual de tablero eléctrico", "QPR", "Fallo eléctrico", "MENSUAL", -1, True),
@@ -248,8 +283,16 @@ class Command(BaseCommand):
             action="store_true",
             help="Genera una contraseña nueva aunque los usuarios ya existan.",
         )
+        parser.add_argument(
+            "--agregar-trabajos",
+            action="store_true",
+            help="No borra nada: agrega un lote de trabajos nuevos para qa_tecnico.",
+        )
 
     def handle(self, *args, **opciones):
+        if opciones["agregar_trabajos"]:
+            self._agregar_trabajos()
+            return
         # Las reglas avisan por push al publicar ofertas y cerrar órdenes; al
         # preparar datos de prueba no se debe avisar a nadie.
         with override_settings(SEMAXEL_PUSH_BACKEND="memoria"):
@@ -272,6 +315,37 @@ class Command(BaseCommand):
         self._resumen(borrados, generados)
         self._informar_clave(clave, opciones["archivo_clave"])
         self.stdout.write(self.style.SUCCESS("Entorno de QA listo."))
+
+    def _agregar_trabajos(self):
+        """Suma TRABAJOS_EXTRA sin tocar los datos, usuarios ni la clave."""
+        with override_settings(SEMAXEL_PUSH_BACKEND="memoria"):
+            with transaction.atomic():
+                self.base = self._datos_base()
+                self.empresas = {e.codigo: e for e in Empresa.objects.filter(codigo__in=EMPRESAS)}
+                self.usuarios = {u.username: u for u in User.objects.filter(username__in=USUARIOS)}
+                self.tecnicos = {
+                    t.usuario.username: t
+                    for t in Tecnico.objects.filter(usuario__username__in=TECNICOS).select_related("usuario")
+                }
+                if (len(self.empresas), len(self.usuarios), len(self.tecnicos)) != (
+                    len(EMPRESAS), len(USUARIOS), len(TECNICOS)
+                ):
+                    raise CommandError("No hay entorno de QA. Ejecuta primero: python manage.py preparar_qa")
+                self.sucursales = {
+                    s.codigo: s for s in Sucursal.objects.filter(empresa__codigo__in=EMPRESAS)
+                }
+                creados = []
+                for datos in TRABAJOS_EXTRA:
+                    datos = {**datos, "n": _proximo_numero(self.sucursales[datos["suc"]])}
+                    self._crear_ticket(datos)
+                    creados.append(datos)
+        from api import notificaciones
+
+        notificaciones.BANDEJA.clear()
+        self.stdout.write(f"  trabajos agregados: {len(creados)} (no se borró nada)")
+        for d in creados:
+            self.stdout.write(f"    {d['n']} ({d['flujo']}): {d['prueba']}")
+        self.stdout.write(self.style.SUCCESS("Trabajos de QA agregados."))
 
     # ------------------------------------------------------------ datos base
 

@@ -101,7 +101,7 @@ Todos están en `scripts/` y se ejecutan desde PowerShell en Windows.
 | Script | Qué hace |
 |---|---|
 | `instalar.ps1` | Primera vez: crea `venv\`, instala las dependencias y crea el `.env` con una `SECRET_KEY` nueva |
-| `preparar-datos.ps1` | Carga los datos de demostración (`seed_demo`) y el entorno de QA (`preparar_qa`). `-SoloQA` reinicia solo los datos de QA; `-NuevaClave` cambia la clave de los usuarios `qa_*` |
+| `preparar-datos.ps1` | Carga los datos de demostración (`seed_demo`) y el entorno de QA (`preparar_qa`). `-SoloQA` reinicia solo los datos de QA; `-NuevaClave` cambia la clave de los usuarios `qa_*`; `-AgregarTrabajos` suma 8 trabajos nuevos para `qa_tecnico` sin borrar nada |
 | `levantar-todo.ps1` / `.cmd` | Levanta MySQL, el servidor y el emulador, cada uno en su ventana |
 | `apagar-todo.ps1` / `.cmd` | Apaga el emulador, el servidor y MySQL |
 | `estado.ps1` | Muestra qué está corriendo y las direcciones para entrar |

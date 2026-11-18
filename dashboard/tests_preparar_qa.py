@@ -176,6 +176,34 @@ class PrepararQATests(TestCase):
         for username in ("qa_tecnico", "qa_admin", "qa_gerencia", "qa_otra_admin"):
             self.assertTrue(User.objects.get(username=username).check_password(clave), username)
 
+    def test_agregar_trabajos_suma_sin_borrar_nada(self):
+        ruta = Path(self.media) / "qa.txt"
+        _correr("--archivo-clave", str(ruta))
+        clave = _clave(ruta)
+        antes = set(self._tickets_qa().values_list("numero", flat=True))
+        ordenes = OrdenTrabajo.objects.filter(tecnico__usuario__username="qa_tecnico")
+        activas_antes = ordenes.filter(estado__in=["ASIGNADA", "EN_EJECUCION"]).count()
+
+        salida = _correr("--agregar-trabajos")
+        salida += _correr("--agregar-trabajos")  # se puede repetir
+
+        nuevos = set(self._tickets_qa().values_list("numero", flat=True)) - antes
+        self.assertEqual(len(nuevos), 16)
+        self.assertIn("QA-00019", nuevos)  # sigue la numeración del sistema
+        self.assertTrue(antes <= set(self._tickets_qa().values_list("numero", flat=True)))
+        self.assertEqual(ordenes.filter(estado="ASIGNADA").count() + ordenes.filter(estado="EN_EJECUCION").count(),
+                         activas_antes + 10)
+        tecnico = Tecnico.objects.get(usuario__username="qa_tecnico")
+        self.assertEqual(
+            ofertas_disponibles_para(tecnico).filter(ticket__numero__in=nuevos).count(), 6
+        )
+        self.assertTrue(User.objects.get(username="qa_tecnico").check_password(clave))
+        self.assertNotIn("Contraseña", salida)
+
+    def test_agregar_trabajos_sin_entorno_avisa(self):
+        with self.assertRaisesMessage(CommandError, "preparar_qa"):
+            _correr("--agregar-trabajos")
+
     def test_nueva_clave_cambia_la_contrasena(self):
         ruta = Path(self.media) / "qa.txt"
         _correr("--archivo-clave", str(ruta))

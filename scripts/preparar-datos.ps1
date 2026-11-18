@@ -3,13 +3,22 @@
 #   - preparar_qa: usuarios qa_* de todos los roles y datos falsos para
 #                  probar todo. Reinicia los datos de QA cada vez que se corre.
 # La clave de los usuarios qa_* se guarda en <Credenciales>\qa.txt (fuera de Git).
-#   -SoloQA      no vuelve a correr seed_demo (solo reinicia los datos de QA).
-#   -NuevaClave  genera una clave nueva para los usuarios qa_*.
-param([switch]$SoloQA, [switch]$NuevaClave)
+#   -SoloQA           no vuelve a correr seed_demo (solo reinicia los datos de QA).
+#   -NuevaClave       genera una clave nueva para los usuarios qa_*.
+#   -AgregarTrabajos  NO borra nada: suma 8 trabajos nuevos para qa_tecnico
+#                     (3 asignados, 2 en ejecución y 3 ofertas).
+param([switch]$SoloQA, [switch]$NuevaClave, [switch]$AgregarTrabajos)
 
 . "$PSScriptRoot\_comun.ps1"
 Set-Location $Raiz
 if (-not (Test-Puerto $Semaxel.PuertoMysql)) { throw 'MySQL no está corriendo. Ejecuta primero scripts\iniciar-mysql.ps1.' }
+
+if ($AgregarTrabajos) {
+    Write-Paso 'Agregando trabajos de QA (no se borra nada)'
+    & $Python manage.py preparar_qa --agregar-trabajos
+    if ($LASTEXITCODE -ne 0) { throw 'Falló preparar_qa --agregar-trabajos.' }
+    return
+}
 
 Write-Paso 'Aplicando migraciones pendientes'
 & $Python manage.py migrate --noinput | Select-Object -Last 1
