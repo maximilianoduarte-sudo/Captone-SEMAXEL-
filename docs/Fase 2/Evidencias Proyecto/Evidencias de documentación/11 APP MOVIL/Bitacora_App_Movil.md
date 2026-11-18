@@ -55,6 +55,7 @@ Cada parte tiene la misma estructura:
 | 9.6 | Inicio, Ofertas y Trabajos se recargan al abrirlas; arreglo del error de "Trabajos" (consola en modo selección) | `1dffcbc` | 209 + 21 de la app | Hecho |
 | 9.7 | Android Studio Rabbit 2 en D: con script para abrirlo | `6db1dd0` | — | Hecho |
 | 9.8 | WhatsApp a la sucursal, Trabajos como historial por mes, dinero generado en Perfil y sin pestaña Evidencias | `836ae0b` | 210 + 27 de la app | Hecho |
+| 9.9 | Deslizar hacia abajo para actualizar (sin botón "Actualizar") | `61f3acd` | 210 + 27 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -1006,6 +1007,29 @@ de esta parte.
    trabajos cerrados, calificaciones). Se complementa con Firebase (parte 8).
 4. **Calificaciones:** las notas y comentarios que dejaron las sucursales al
    cerrar los trabajos, con el promedio.
+
+---
+
+## Parte 9.9: deslizar hacia abajo para actualizar (commit `61f3acd`)
+
+**Pedido.** Sacar el botón "Actualizar" y que la lista se actualice al
+tirarla hacia abajo desde arriba, como en las apps móviles.
+
+**Qué se hizo.**
+
+- Componente `DeslizarParaActualizar` (`ui/comun/Componentes.kt`) sobre
+  `PullToRefreshBox` de Material 3: al tirar hacia abajo aparece la rueda y
+  se vuelve a pedir el dato al servidor.
+- Se usa en Inicio, Ofertas, Mis trabajos y el detalle del trabajo. Se
+  quitaron los cuatro botones "Actualizar".
+- `cargar()` de esas pantallas devuelve el `Job` de la carga, para que la
+  rueda desaparezca justo cuando llega la respuesta.
+- Se mantiene la recarga automática al abrir cada pestaña (parte 9.6); el
+  gesto sirve para actualizar sin salir de la pantalla.
+
+**Verificación (18-11-2026).** Compila y pasan las 27 pruebas de la app. En
+el emulador, tirar hacia abajo en Ofertas, Mis trabajos e Inicio hizo una
+petición al servidor cada vez (200, entre 10 y 58 ms).
 
 ---
 
