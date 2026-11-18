@@ -52,6 +52,7 @@ Cada parte tiene la misma estructura:
 | 9.3 | Datos falsos para probar todo: 9 usuarios (todos los roles), 2 empresas, 20 tickets en todos los estados, fotos, firmas, calificaciones, SLA y mantenimiento | `4638582` | 207 + 21 de la app | Hecho (pruebas manuales en curso) |
 | 9.4 | Scripts para levantar y apagar todo y README actualizado | `38f2ead` | Scripts probados a mano | Hecho |
 | 9.5 | `preparar_qa --agregar-trabajos`: más trabajos para probar sin reiniciar | `554b9e1` | 209 + 21 de la app | Hecho |
+| 9.6 | Inicio, Ofertas y Trabajos se recargan al abrirlas; arreglo del error de "Trabajos" (consola en modo selección) | `1dffcbc` | 209 + 21 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -865,6 +866,55 @@ cerradas, 1 cancelada y ninguna activa) y pidió más trabajos.
 
 ---
 
+## Parte 9.6: las pestañas se recargan solas y error de "Trabajos" (commit `1dffcbc`)
+
+**Pedido.** Sebastián pidió que Inicio, Ofertas y Trabajos se actualicen al
+abrirlas, y reportó que la pestaña Trabajos daba error.
+
+**El error (hallazgo H22).** La app mostraba "No se pudo conectar con el
+servidor" en Trabajos, y al tocar "Reintentar" funcionaba. El registro de la
+app mostraba `SocketTimeoutException` (30 s sin respuesta). Se investigó:
+
+1. La API respondía en 0,2 s con `curl`: no era la consulta.
+2. Con dos peticiones seguidas por la misma conexión, la segunda no se
+   respondía nunca. Un `runserver` nuevo en otro puerto respondía bien.
+3. La ventana del servidor se llamaba **"Select SEMAXEL - Servidor web"**: se
+   había hecho clic en ella y Windows la dejó en "modo selección" (QuickEdit),
+   que congela la salida del programa. `runserver` escribe una línea por cada
+   petición; el hilo que atendía la conexión se quedaba bloqueado al escribirla
+   y la siguiente petición por esa conexión no se atendía. La app reutiliza
+   conexiones, por eso fallaba a ratos.
+
+No era un error de la app ni de la API. **Arreglo:** los scripts
+`iniciar-mysql`, `iniciar-servidor` e `iniciar-emulador` desactivan el modo
+selección de su ventana al abrirse (`Disable-ModoSeleccion` en
+`scripts/_comun.ps1`). Para copiar texto de esas ventanas queda el menú de la
+ventana (Editar > Marcar).
+
+**La recarga al abrir.**
+
+- Nuevo `RecargarAlMostrarse` (`ui/comun/Componentes.kt`): usa
+  `LifecycleResumeEffect` y llama a `cargar()` cada vez que la pantalla queda
+  a la vista: al tocar su pestaña, al volver desde un detalle (por ejemplo,
+  después de resolver una orden) y al volver a la app.
+- Lo usan Inicio, Ofertas, Trabajos y también Evidencias (comparte la lista
+  de trabajos).
+- Los ViewModels de esas listas ya no cargan al crearse (`init`), para no
+  pedir lo mismo dos veces la primera vez.
+- Al recargar no se borra lo que hay en pantalla: se reemplaza cuando llegan
+  los datos nuevos, así no parpadea. En Inicio se cambió `cargar()` para no
+  volver a la rueda de carga si ya había datos.
+
+**Verificación (18-11-2026).**
+
+- Pruebas unitarias de la app: pasan las 21.
+- En el emulador, al tocar Ofertas, Trabajos, Inicio, Trabajos y Ofertas se
+  hicieron 5 peticiones (una por cada vez), todas con 200 y entre 11 y 58 ms.
+- Servidor reiniciado con el arreglo: 3 pares de peticiones por la misma
+  conexión, todas respondidas en milisegundos.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -961,3 +1011,4 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H19 | La dirección repetía la ciudad ("Temuco, Temuco, Temuco"). | Corregido en la parte 9.1 |
 | H20 | En `seed_demo`, las sucursales de Temuco (Centro y Mall Plaza) no tienen coordenadas: la llegada a esas sucursales queda "no verificable" y no sirve para probar el radio de 150 m. | Por decidir (agregar coordenadas hipotéticas) |
 | H21 | La clave de `root` de MySQL del servidor de pruebas quedó visible en la salida de un comando de la sesión con la IA (parte 9.4). No está en Git y MySQL solo escucha en 127.0.0.1. | Cambiar la clave de `root` |
+| H22 | La pestaña Trabajos daba "No se pudo conectar" a ratos: la ventana del servidor quedó en modo selección de Windows y congelaba `runserver`. | Corregido en la parte 9.6 (los scripts desactivan ese modo) |

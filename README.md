@@ -228,6 +228,7 @@ cd app-movil; .\gradlew.bat testDebugUnitTest     # app móvil
 |---|---|
 | "MySQL no está corriendo" | Ejecutar `.\scripts\iniciar-mysql.ps1` o `levantar-todo.ps1`. Con el servicio `MySQL80` puede pedir PowerShell como administrador |
 | El servidor no arranca: puerto 8000 ocupado | `.\scripts\estado.ps1` para ver qué corre; `.\scripts\apagar-todo.ps1` lo libera |
+| La app muestra "No se pudo conectar" a ratos y la ventana del servidor dice "Select ..." | Se hizo clic en la ventana y Windows congeló el servidor. Presionar Esc en esa ventana. Desde la parte 9.6 los scripts desactivan ese modo al abrir cada ventana |
 | La app dice que no puede conectarse | Revisar que el servidor esté corriendo y que `ALLOWED_HOSTS` en el `.env` incluya `10.0.2.2` |
 | `Bad Request (400)` al entrar por la IP | Agregar esa IP a `ALLOWED_HOSTS` y reiniciar el servidor |
 | No existe el dispositivo virtual | Ver los disponibles con `emulator -list-avds` y poner el nombre en `Avd` de `scripts\config.local.ps1` |
