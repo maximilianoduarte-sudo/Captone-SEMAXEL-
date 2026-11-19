@@ -56,6 +56,7 @@ Cada parte tiene la misma estructura:
 | 9.7 | Android Studio Rabbit 2 en D: con script para abrirlo | `6db1dd0` | — | Hecho |
 | 9.8 | WhatsApp a la sucursal, Trabajos como historial por mes, dinero generado en Perfil y sin pestaña Evidencias | `836ae0b` | 210 + 27 de la app | Hecho |
 | 9.9 | Deslizar hacia abajo para actualizar (sin botón "Actualizar") | `61f3acd` | 210 + 27 de la app | Hecho |
+| 9.10 | Web del técnico: solo tomar ofertas y contactar a la sucursal; avanzar trabajos solo en la app | `2b93df3` | 214 + 27 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -1035,6 +1036,43 @@ tirarla hacia abajo desde arriba, como en las apps móviles.
 **Verificación (18-11-2026).** Compila y pasan las 27 pruebas de la app. En
 el emulador, tirar hacia abajo en Ofertas, Mis trabajos e Inicio hizo una
 petición al servidor cada vez (200, entre 10 y 58 ms).
+
+---
+
+## Parte 9.10: la web del técnico solo para tomar ofertas y contactar (commit `2b93df3`)
+
+**Pedido.** Que la web le sirva al técnico solo para tomar trabajos y
+comunicarse con el cliente; todo lo demás, en el celular.
+
+**Antes.** En la web el técnico podía, además de tomar ofertas, avanzar sus
+órdenes (iniciar y resolver) con el formulario de transición, sin GPS, fotos
+ni firma.
+
+**Qué se hizo.**
+
+| En la web el técnico… | Ahora |
+|---|---|
+| Ve y toma ofertas | Igual |
+| Ve sus órdenes (lista y detalle) | Igual, pero el detalle no tiene formulario de transición: muestra "Este trabajo se avanza desde la app SEMAXEL Técnico" |
+| Contacta a la sucursal | **Nuevo:** tarjeta "Contacto con la sucursal" en el detalle de la orden: WhatsApp con mensaje listo, llamar, correo de la sucursal y nombre y correo del encargado |
+| Avanza la orden o cambia el estado del ticket | **Ya no:** el servidor responde 403 aunque se envíe el formulario a mano |
+
+Los demás roles (administración, gestor, encargado, gerencia) no cambian. La
+API de la app no cambia: el técnico sigue avanzando sus trabajos desde ahí.
+
+**Decisiones.**
+
+- El bloqueo está en las vistas web (`tickets/ordenes_views.py` y
+  `tickets/views.py`), no en las reglas compartidas (`cambiar_estado_orden`),
+  porque la app usa esas mismas reglas.
+- El enlace de WhatsApp usa el mismo formato de teléfono que la app
+  (`tickets/contacto.py`, igual que `WhatsApp.kt`).
+
+**Verificación (18-11-2026).** 4 pruebas nuevas en `tickets/tests.py`
+(`TecnicoEnLaWebTests`): el detalle no ofrece transiciones y muestra WhatsApp
+y teléfono; el POST de transición y el de estado de ticket responden 403; el
+formato del teléfono. 214 pruebas de Django, todas pasan. Se agregaron los
+casos W-24 a W-26 a la Guía de pruebas QA.
 
 ---
 

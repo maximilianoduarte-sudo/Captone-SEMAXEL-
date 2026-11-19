@@ -233,6 +233,9 @@ Marcar el resultado con ✅ (como se esperaba) o ❌ (anotar qué pasó).
 | W-21 | `qa_gestor` | Tickets y ofertas de QA | Se ven y puede gestionarlos | |
 | W-22 | `qa_otra_admin` | Tickets | Solo QAOTRA-00001 y QAOTRA-00002 | |
 | W-23 | `qa_tecnico` | Entrar a la web | No ve el Dashboard; su espacio es Ofertas | |
+| W-24 | `qa_tecnico` | Órdenes de Trabajo → abrir una orden activa | Sin formulario de transición; aviso "se avanza desde la app SEMAXEL Técnico" | |
+| W-25 | `qa_tecnico` | En esa orden, tarjeta "Contacto con la sucursal" | Botones WhatsApp (abre `wa.me` con el mensaje), Llamar y correo; nombre del encargado | |
+| W-26 | `qa_tecnico` | Tomar una oferta desde la web | Se crea la orden (luego se avanza en la app) | |
 
 ---
 
