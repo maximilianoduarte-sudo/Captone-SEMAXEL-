@@ -1120,8 +1120,11 @@ está en el repositorio).
   `scripts/grabar-video-app.py --ensayo --capturas`. El Word se armó con
   python-docx y se revisó convertido a PDF con Word.
 
-**Video (`SEMAXEL - demo app tecnico.mp4`, 4 min 40 s, 1080×2400).** También
-en Descargas (no se sube al repositorio por su tamaño, 20 MB).
+**Video (`SEMAXEL - demo app tecnico.mp4`, 1080×2400).** También en Descargas
+(no se sube al repositorio por su tamaño). A pedido de Sebastián queda a
+**velocidad 1,6×** (2 min 55 s); la grabación original a velocidad normal
+(4 min 40 s) se guardó como `… (velocidad normal).mp4`. El guion usa 1,6× por
+defecto (`--velocidad`).
 
 - Recorre: iniciar sesión, Inicio, Ofertas (deslizar para actualizar), tomar
   una oferta, llegada con GPS (verificada a 0 m), botón de WhatsApp, iniciar

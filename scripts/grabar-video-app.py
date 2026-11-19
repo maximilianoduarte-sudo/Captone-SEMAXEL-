@@ -362,6 +362,8 @@ ESCENAS = [escena_login, escena_inicio, escena_ofertas_y_tomar, escena_llegada_e
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--ensayo", action="store_true", help="Recorre el flujo sin grabar.")
+    p.add_argument("--velocidad", type=float, default=1.6,
+                   help="Velocidad del video final (1.6 = 60 %% más rápido que la grabación).")
     p.add_argument("--capturas", help="Carpeta donde guardar capturas de cada paso.")
     p.add_argument("--salida", default=str(Path(__file__).resolve().parent.parent / "video-demo-app.mp4"))
     args = p.parse_args()
@@ -391,6 +393,7 @@ def main():
         shell("settings", "put", "system", "show_touches", "0")
     if not args.ensayo:
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(webm),
+                        "-vf", f"setpts=PTS/{args.velocidad}", "-an",
                         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "23", "-r", "30",
                         "-movflags", "+faststart", args.salida], check=True)
         webm.unlink(missing_ok=True)
