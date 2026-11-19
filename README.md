@@ -112,6 +112,7 @@ Todos están en `scripts/` y se ejecutan desde PowerShell en Windows.
 | `abrir-android-studio.ps1` / `.cmd` | Abre Android Studio con `app-movil`, el SDK y el emulador del equipo, y sus cachés en D: (ver [Desarrollar la app en Android Studio](#desarrollar-la-app-en-android-studio)) |
 | `grabar-video-app.py` | Graba un video de demostración de la app en el emulador (flujo completo del técnico, a ritmo humano). `--ensayo` lo recorre sin grabar; `--capturas <carpeta>` guarda una captura por paso |
 | `capturas-manual-web.py` | Toma las capturas de la web para el manual de usuario (Chrome sin ventana, una sesión por usuario de prueba). Se ejecuta con `venv\Scripts\python.exe` |
+| `grabar-video-web.py` | Graba un video de demostración de la web (encargado, técnico y gerencia) con Chrome sin ventana y un cursor visible. Se ejecuta con `venv\Scripts\python.exe`; `--velocidad` acelera el video |
 
 Las rutas por defecto son las del equipo de pruebas: MySQL portable en
 `D:\herramientas-servidor` y herramientas de Android en
