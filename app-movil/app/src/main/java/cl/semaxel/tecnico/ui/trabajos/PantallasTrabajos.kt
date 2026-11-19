@@ -47,6 +47,7 @@ import cl.semaxel.tecnico.ui.comun.Dato
 import cl.semaxel.tecnico.ui.comun.Etiqueta
 import cl.semaxel.tecnico.ui.comun.EtiquetaPrioridad
 import cl.semaxel.tecnico.ui.comun.Formato
+import cl.semaxel.tecnico.ui.comun.MOSTRAR_DINERO
 import cl.semaxel.tecnico.ui.comun.Mensaje
 import cl.semaxel.tecnico.ui.comun.MensajeError
 import cl.semaxel.tecnico.ui.comun.TarjetaOrden
@@ -115,7 +116,8 @@ fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
-                                "${mes.ordenes.size} trabajo(s) · ${Formato.pesos(mes.total.toPlainString())}",
+                                "${mes.ordenes.size} trabajo(s)" +
+                                    if (MOSTRAR_DINERO) " · ${Formato.pesos(mes.total.toPlainString())}" else "",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -127,7 +129,7 @@ fun PantallaTrabajos(alAbrirTrabajo: (Int) -> Unit) {
                             alTocar = { alAbrirTrabajo(orden.id) },
                             pie = orden.fechaFin?.let { fin ->
                                 "Terminada ${Formato.fecha(fin)}" +
-                                    (orden.costoFinal?.let { " · ${Formato.pesos(it)}" } ?: "")
+                                    (orden.costoFinal?.takeIf { MOSTRAR_DINERO }?.let { " · ${Formato.pesos(it)}" } ?: "")
                             } ?: "Asignada ${Formato.fecha(orden.fechaAsignacion)}",
                         )
                     }

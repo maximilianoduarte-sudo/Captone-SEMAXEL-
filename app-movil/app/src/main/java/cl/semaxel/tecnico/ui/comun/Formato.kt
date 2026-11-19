@@ -11,6 +11,14 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+/**
+ * Muestra el dinero generado por el técnico (métricas de Perfil y montos del
+ * historial de Mis trabajos). Oculto por ahora a pedido de Sebastián
+ * (18-11-2026); el servidor lo sigue calculando. Cambiar a true para volver
+ * a mostrarlo.
+ */
+const val MOSTRAR_DINERO = false
+
 /** Utilidades de formato para mostrar datos de la API. */
 object Formato {
 

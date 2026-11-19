@@ -27,6 +27,7 @@ import cl.semaxel.tecnico.data.remote.Ganancias
 import cl.semaxel.tecnico.data.remote.Tecnico
 import cl.semaxel.tecnico.ui.comun.Cargando
 import cl.semaxel.tecnico.ui.comun.Formato
+import cl.semaxel.tecnico.ui.comun.MOSTRAR_DINERO
 import cl.semaxel.tecnico.ui.comun.RecargarAlMostrarse
 import cl.semaxel.tecnico.ui.comun.MensajeError
 import cl.semaxel.tecnico.ui.viewModelConRepositorio
@@ -74,19 +75,21 @@ private fun ContenidoPerfil(
             }
         }
 
-        // ---------------- dinero generado ----------------
-        val ganancias = tecnico.ganancias ?: Ganancias()
-        Text("Dinero generado", style = MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Metrica("Este mes", Formato.pesos(ganancias.mes), Modifier.weight(1f))
-            Metrica("Este año", Formato.pesos(ganancias.anio), Modifier.weight(1f))
-            Metrica("Total", Formato.pesos(ganancias.total), Modifier.weight(1f))
+        // ---------------- dinero generado (oculto por ahora) ----------------
+        if (MOSTRAR_DINERO) {
+            val ganancias = tecnico.ganancias ?: Ganancias()
+            Text("Dinero generado", style = MaterialTheme.typography.titleSmall)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Metrica("Este mes", Formato.pesos(ganancias.mes), Modifier.weight(1f))
+                Metrica("Este año", Formato.pesos(ganancias.anio), Modifier.weight(1f))
+                Metrica("Total", Formato.pesos(ganancias.total), Modifier.weight(1f))
+            }
+            Text(
+                "Suma del costo final de tus trabajos resueltos o cerrados.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
-        Text(
-            "Suma del costo final de tus trabajos resueltos o cerrados.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
 
         Card(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
