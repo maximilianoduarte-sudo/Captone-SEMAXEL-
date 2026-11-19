@@ -1187,6 +1187,12 @@ activos creados antes de la regla (ensayos del video). No puede tomar ofertas
 hasta resolverlos todos; `preparar_qa` reinicia los datos de QA con un solo
 activo. El guion del video necesita a `qa_tecnico` libre para tomar la oferta.
 
+**Datos de QA reiniciados (18-11-2026, a pedido de Sebastián).** Se ejecutó
+`preparar_qa`: se borraron 68 tickets de QA (incluidos los de las pruebas
+manuales y los ensayos del video) y se crearon los 20 del escenario. Quedan
+dos trabajos activos: QA-00008 de `qa_tecnico` (en ejecución) y QA-00013 de
+`qa_tecnico2` (asignada). La contraseña de los usuarios `qa_*` no cambió.
+
 ---
 
 ## Referencia rápida de la API
