@@ -59,6 +59,7 @@ Cada parte tiene la misma estructura:
 | 9.10 | Web del técnico: solo tomar ofertas y contactar a la sucursal; avanzar trabajos solo en la app | `2b93df3` | 214 + 27 de la app | Hecho |
 | 9.11 | Manual de usuario v2 (con capturas reales y la app) y video de demostración de la app | `d0a1b81` | — | Hecho |
 | 9.12 | Un técnico solo puede tener un trabajo activo a la vez | `a7cf872` | 219 + 27 de la app | Hecho |
+| 9.13 | Video de demostración de la web | `842534b` | — | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -1201,6 +1202,36 @@ velocidad normal (4 min 52 s, `… (velocidad normal).mp4`) y se generó la
 versión a 1,6× (3 min 2 s, `SEMAXEL - demo app tecnico.mp4`), ambos en
 Descargas. Sigue visible H23 (el contador de fotos del detalle no se
 actualiza al volver).
+
+---
+
+## Parte 9.13: video de demostración de la web (commit `842534b`)
+
+**Pedido.** Grabar un video de la web a velocidad normal.
+
+**Resultado.** `SEMAXEL - demo web.mp4` (3 min 29 s, 1440×900, 5 MB), en
+Descargas (no se sube al repositorio). Recorre el ciclo de un trabajo en la
+web con tres roles y datos de QA:
+
+1. **Encargado (`qa_encargado`):** entra, revisa el Dashboard, crea el ticket
+   «Enchufe sin corriente en caja 3» (QA Providencia, prioridad Alta),
+   publica la oferta y cierra con calificación 5 un trabajo que el técnico
+   había resuelto desde la app (se ven su llegada GPS, la foto y la firma).
+2. **Técnico (`qa_tecnico`):** toma la oferta nueva y abre su orden: tarjeta
+   de contacto con la sucursal (WhatsApp, llamar) y el aviso de que el
+   trabajo se avanza desde la app.
+3. **Gerencia (`qa_gerencia`):** Dashboard y Reportes.
+
+**Cómo se grabó.** `scripts/grabar-video-web.py`: Chrome sin ventana con su
+transmisión de pantalla (screencast), un cursor dibujado sobre la página que
+se mueve de forma suave y marca cada clic, y escritura letra por letra con
+pausas variables. El video se arma con ffmpeg respetando el tiempo real entre
+cuadros. Es una **grabación automatizada** y así se declara. Antes de grabar
+deja libre a `qa_tecnico` (un trabajo activo a la vez).
+
+**Efecto en los datos de QA.** Quedó creado el ticket «Enchufe sin corriente
+en caja 3», tomado por `qa_tecnico` (que queda con ese trabajo activo), y
+cerrado con calificación el trabajo «Puerta de bodega descuadrada».
 
 ---
 
