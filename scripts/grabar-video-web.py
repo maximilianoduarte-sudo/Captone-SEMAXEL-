@@ -5,9 +5,11 @@ Recorre el ciclo de un trabajo en la web, con tres roles:
 1. Encargado (qa_encargado): Dashboard, crea un ticket, publica la oferta y
    cierra con calificación un trabajo que el técnico resolvió desde la app
    (con su llegada GPS, fotos y firma).
-2. Técnico (qa_tecnico): toma la oferta nueva y ve su orden con el contacto
+2. Administrador (qa_admin): usuarios, empresa, sucursales, técnicos y
+   mantenimiento preventivo (genera los preventivos vencidos).
+3. Técnico (qa_tecnico): toma la oferta nueva y ve su orden con el contacto
    de la sucursal (el trabajo se avanza desde la app).
-3. Gerencia (qa_gerencia): Dashboard y Reportes.
+4. Gerencia (qa_gerencia): Dashboard y Reportes.
 
 Lo graba Chrome sin ventana (headless) con su transmisión de pantalla
 (screencast) y un cursor dibujado sobre la página que se mueve de forma
@@ -349,6 +351,36 @@ def escena_encargado():
     salir()
 
 
+def escena_admin():
+    """Administrador de la empresa: usuarios, empresa, sucursales, técnicos y mantenimiento."""
+    from empresas.models import Empresa
+    from tecnicos.models import Tecnico
+
+    entrar("qa_admin")
+    pausa(1.2, 1.6)
+    clic("a.side-link", "Usuarios", navega=True)
+    pausa(2.0, 2.6)
+    clic("a.side-link", "Empresas", navega=True)
+    pausa(1.0, 1.4)
+    empresa = Empresa.objects.get(codigo="QA")
+    clic(f'a[href="/empresas/{empresa.pk}/"]', navega=True)
+    pausa(1.2, 1.6)
+    desplazar(380, 2)
+    pausa(1.2, 1.6)
+    clic("a.side-link", "Sucursales", navega=True)
+    pausa(2.0, 2.5)
+    clic("a.side-link", "Técnicos", navega=True)
+    pausa(1.5, 2.0)
+    tecnico = Tecnico.objects.get(usuario__username="qa_tecnico")
+    clic(f'a[href="/tecnicos/{tecnico.pk}/"]', navega=True)
+    pausa(2.0, 2.6)
+    clic("a.side-link", "Mantenimiento", navega=True)
+    pausa(1.2, 1.6)
+    clic("button[type=submit]", "Generar preventivos", navega=True)
+    pausa(2.2, 2.8)
+    salir()
+
+
 def escena_tecnico():
     entrar("qa_tecnico")
     pausa(1.0, 1.5)
@@ -406,9 +438,17 @@ def video(cuadros, salida, velocidad):
         lineas.append(f"duration {max(t2 - t, 0.001):.4f}")
     lineas.append(f"file '{cuadros[-1][1].as_posix()}'")
     lista.write_text("\n".join(lineas), encoding="utf-8")
-    filtro = f"setpts=PTS/{velocidad},fps=30,scale={ANCHO}:{ALTO}"
+    # Los JPEG de Chrome son de rango completo: se convierten al rango de video
+    # (limitado) y se etiqueta el color como BT.709 (SDR), para que los
+    # reproductores no lo muestren lavado o demasiado brillante.
+    filtro = (f"setpts=PTS/{velocidad},fps=30,"
+              f"scale={ANCHO}:{ALTO}:in_range=full:out_range=limited:out_color_matrix=bt709,format=yuv420p")
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", str(lista),
-                    "-vf", filtro, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "22",
+                    "-vf", filtro, "-c:v", "libx264", "-crf", "22",
+                    "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+                    "-color_range", "tv",
+                    "-bsf:v", "h264_metadata=colour_primaries=1:transfer_characteristics=1"
+                              ":matrix_coefficients=1:video_full_range_flag=0",
                     "-movflags", "+faststart", str(salida)], check=True)
 
 
@@ -429,7 +469,7 @@ def main():
         g.js("localStorage.cx = 720; localStorage.cy = 450")
         g.grabar()
         time.sleep(1.5)
-        for escena in (escena_encargado, escena_tecnico, escena_gerencia):
+        for escena in (escena_encargado, escena_admin, escena_tecnico, escena_gerencia):
             print(f"  {escena.__name__}", flush=True)
             escena()
     finally:
