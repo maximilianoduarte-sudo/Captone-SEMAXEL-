@@ -103,8 +103,9 @@ class PrepararQATests(TestCase):
                 .filter(ticket__sucursal__empresa__codigo__in=["QA", "QAOTRA"])
                 .values_list("ticket__numero", flat=True)
             )
-        # 04: sin la especialidad; 05: ya tomada; 06: vencida.
-        self.assertEqual(numeros("qa_tecnico"), {"QA-00001", "QA-00002", "QA-00003", "QA-00007", "QAOTRA-00002"})
+        # 04: sin la especialidad; 06: vencida.
+        self.assertEqual(numeros("qa_tecnico"),
+                         {"QA-00001", "QA-00002", "QA-00003", "QA-00005", "QA-00007", "QAOTRA-00002"})
         self.assertEqual(numeros("qa_tecnico2"), {"QA-00004"})
 
     def test_estados_de_los_tecnicos(self):
@@ -181,24 +182,33 @@ class PrepararQATests(TestCase):
         _correr("--archivo-clave", str(ruta))
         clave = _clave(ruta)
         antes = set(self._tickets_qa().values_list("numero", flat=True))
-        ordenes = OrdenTrabajo.objects.filter(tecnico__usuario__username="qa_tecnico")
-        activas_antes = ordenes.filter(estado__in=["ASIGNADA", "EN_EJECUCION"]).count()
+        activas = OrdenTrabajo.objects.filter(estado__in=["ASIGNADA", "EN_EJECUCION"])
 
         salida = _correr("--agregar-trabajos")
         salida += _correr("--agregar-trabajos")  # se puede repetir
 
         nuevos = set(self._tickets_qa().values_list("numero", flat=True)) - antes
-        self.assertEqual(len(nuevos), 16)
+        self.assertEqual(len(nuevos), 14)  # 7 ofertas por vez
         self.assertIn("QA-00019", nuevos)  # sigue la numeración del sistema
         self.assertTrue(antes <= set(self._tickets_qa().values_list("numero", flat=True)))
-        self.assertEqual(ordenes.filter(estado="ASIGNADA").count() + ordenes.filter(estado="EN_EJECUCION").count(),
-                         activas_antes + 10)
+        # qa_tecnico ya tenía QA-00008 activo: no se le agrega otro.
+        self.assertIn("ya tiene un trabajo activo", salida)
+        self.assertEqual(activas.filter(tecnico__usuario__username="qa_tecnico").count(), 1)
         tecnico = Tecnico.objects.get(usuario__username="qa_tecnico")
         self.assertEqual(
-            ofertas_disponibles_para(tecnico).filter(ticket__numero__in=nuevos).count(), 6
+            ofertas_disponibles_para(tecnico).filter(ticket__numero__in=nuevos).count(), 14
         )
         self.assertTrue(User.objects.get(username="qa_tecnico").check_password(clave))
         self.assertNotIn("Contraseña", salida)
+
+    def test_cada_tecnico_queda_con_un_solo_trabajo_activo(self):
+        _correr()
+        activas = OrdenTrabajo.objects.filter(estado__in=["ASIGNADA", "EN_EJECUCION"])
+        self.assertEqual(
+            dict(activas.values_list("tecnico__usuario__username", "ticket__numero")
+                 .filter(ticket__numero__startswith="QA")),
+            {"qa_tecnico": "QA-00008", "qa_tecnico2": "QA-00013"},
+        )
 
     def test_agregar_trabajos_sin_entorno_avisa(self):
         with self.assertRaisesMessage(CommandError, "preparar_qa"):

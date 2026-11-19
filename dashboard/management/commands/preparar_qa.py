@@ -34,8 +34,9 @@ queda en el repositorio: se genera al crear los usuarios (o con
 Requiere haber ejecutado ``seed_demo`` antes (especialidades, categorías y
 políticas SLA).
 
-Con ``--agregar-trabajos`` no borra nada: suma un lote de trabajos nuevos
-para ``qa_tecnico`` (asignados, en ejecución y ofertas) a los que ya existen.
+Con ``--agregar-trabajos`` no borra nada: suma 7 ofertas nuevas y, si
+``qa_tecnico`` no tiene un trabajo activo, uno en ejecución (un técnico solo
+puede tener un trabajo activo a la vez).
 Sirve cuando las pruebas ya avanzaron todos los trabajos activos.
 
 Uso:
@@ -177,8 +178,9 @@ TICKETS = [
          prio="ALTA", flujo="oferta", horas=48,
          prueba="App: qa_tecnico NO la ve (sin Climatización); qa_tecnico2 sí."),
     dict(n="QA-00005", titulo="[QA] Llave de paso goteando", suc="QSC", cat="Plomería",
-         prio="MEDIA", flujo="asignada", tecnico="qa_tecnico",
-         prueba="App: orden asignada; probar llegada, iniciar, fotos y firma."),
+         prio="MEDIA", flujo="oferta", horas=72,
+         prueba="App: con QA-00008 activo NO se puede tomar (un trabajo activo a la vez); "
+                "después de resolver QA-00008, sí."),
     dict(n="QA-00006", titulo="[QA] Luminaria de pasillo apagada", suc="QNU", cat="Fallo eléctrico",
          prio="BAJA", flujo="oferta", horas=-1,
          prueba="App: NO debe aparecer (oferta vencida hace 1 hora); en la web vuelve a revisión."),
@@ -203,8 +205,8 @@ TICKETS = [
          prio="BAJA", flujo="cancelada", tecnico="qa_tecnico", dias=5,
          prueba="Web: orden y ticket cancelados (estado terminal)."),
     dict(n="QA-00013", titulo="[QA] Equipo de aire sin enfriar", suc="QSC", cat="Aire acondicionado",
-         prio="ALTA", flujo="ejecucion", tecnico="qa_tecnico2", llegada="dentro",
-         prueba="App: orden de OTRO técnico; qa_tecnico no la ve ni puede tocarla."),
+         prio="ALTA", flujo="asignada", tecnico="qa_tecnico2",
+         prueba="App: orden asignada a OTRO técnico; qa_tecnico no la ve ni puede tocarla."),
     dict(n="QA-00014", titulo="[QA] Tablero eléctrico con olor a quemado", suc="QPR", cat="Fallo eléctrico",
          prio="CRITICA", flujo="abierto", dias=2, adjunto=True, sla_vencido=True,
          prueba="Web: ticket abierto con foto adjunta y SLA vencido; pasar a revisión y publicar."),
@@ -230,30 +232,23 @@ TICKETS = [
 # Lote que suma --agregar-trabajos (sin "n": el número lo da el sistema, como
 # en la web). Cada ejecución agrega otro lote igual con números nuevos.
 TRABAJOS_EXTRA = [
-    dict(titulo="[QA] Cortocircuito en vitrina refrigerada", suc="QPR", cat="Fallo eléctrico",
-         prio="ALTA", flujo="asignada", tecnico="qa_tecnico",
-         prueba="App: orden asignada; llegar dentro del radio, iniciar, fotos, firma y resolver."),
-    dict(titulo="[QA] Filtración en techo de bodega", suc="QNU", cat="Fuga de agua",
-         prio="MEDIA", flujo="asignada", tecnico="qa_tecnico",
-         prueba="App: orden asignada; probar la llegada fuera del radio."),
-    dict(titulo="[QA] Desagüe tapado en cocina", suc="QMA", cat="Plomería",
-         prio="BAJA", flujo="asignada", tecnico="qa_tecnico",
-         prueba="App: orden asignada en sucursal sin GPS (llegada no verificable)."),
     dict(titulo="[QA] Baldosas sueltas en pasillo", suc="QSC", cat="Infraestructura / Obra",
          prio="MEDIA", flujo="ejecucion", tecnico="qa_tecnico", llegada="dentro",
-         prueba="App: en ejecución con 2 fotos; agregar o borrar fotos, firmar y resolver."),
+         prueba="App: en ejecución con 2 fotos (solo si qa_tecnico no tenía un trabajo activo)."),
+    dict(titulo="[QA] Cortocircuito en vitrina refrigerada", suc="QPR", cat="Fallo eléctrico",
+         prio="ALTA", flujo="oferta", horas=72, prueba="App: oferta para tomar (llegada dentro del radio)."),
+    dict(titulo="[QA] Filtración en techo de bodega", suc="QNU", cat="Fuga de agua",
+         prio="MEDIA", flujo="oferta", horas=72, prueba="App: oferta para tomar."),
+    dict(titulo="[QA] Desagüe tapado en cocina", suc="QMA", cat="Plomería",
+         prio="BAJA", flujo="oferta", horas=72, prueba="App: oferta en sucursal sin GPS."),
     dict(titulo="[QA] Enchufes sin tierra en caja 4", suc="QPR", cat="Fallo eléctrico",
-         prio="CRITICA", flujo="ejecucion", tecnico="qa_tecnico", llegada="dentro",
-         prueba="App: en ejecución, prioridad crítica (SLA corto)."),
+         prio="CRITICA", flujo="oferta", horas=24, prueba="App: oferta crítica."),
     dict(titulo="[QA] Foco de estacionamiento intermitente", suc="QNU", cat="Fallo eléctrico",
-         prio="BAJA", flujo="oferta", horas=72,
-         prueba="App: oferta disponible para tomar."),
+         prio="BAJA", flujo="oferta", horas=72, prueba="App: oferta para tomar."),
     dict(titulo="[QA] Estanque de WC que no carga", suc="QSC", cat="Plomería",
-         prio="MEDIA", flujo="oferta", horas=48,
-         prueba="App: oferta disponible para tomar."),
+         prio="MEDIA", flujo="oferta", horas=48, prueba="App: oferta para tomar."),
     dict(titulo="[QA] Puerta de bodega descuadrada", suc="QPR", cat="Infraestructura / Obra",
-         prio="ALTA", flujo="oferta", horas=24,
-         prueba="App: oferta disponible, vence en 24 horas."),
+         prio="ALTA", flujo="oferta", horas=24, prueba="App: oferta para tomar, vence en 24 horas."),
 ]
 
 # nombre, sucursal, categoría, frecuencia, días hasta la próxima ejecución, activo
@@ -304,7 +299,10 @@ class Command(BaseCommand):
                 self.tecnicos = self._tecnicos()
                 self._asignar_encargado()
                 borrados = self._borrar_datos_anteriores()
-                for datos in TICKETS:
+                # Un técnico solo puede tener un trabajo activo: primero se crean
+                # los trabajos que terminan (resueltos, cerrados, cancelados) y
+                # al final el activo de cada técnico.
+                for datos in sorted(TICKETS, key=lambda d: d["flujo"] in ("asignada", "ejecucion")):
                     self._crear_ticket(datos)
                 generados = self._planes()
                 self._estados_fijos_de_tecnicos()
@@ -336,6 +334,13 @@ class Command(BaseCommand):
                 }
                 creados = []
                 for datos in TRABAJOS_EXTRA:
+                    tecnico = self.tecnicos.get(datos.get("tecnico", ""))
+                    if tecnico and OrdenTrabajo.objects.filter(
+                        tecnico=tecnico, estado__in=["ASIGNADA", "EN_EJECUCION"]
+                    ).exists():
+                        self.stdout.write(f"  omitido «{datos['titulo']}»: {tecnico.usuario.username} "
+                                          "ya tiene un trabajo activo (solo puede tener uno)")
+                        continue
                     datos = {**datos, "n": _proximo_numero(self.sucursales[datos["suc"]])}
                     self._crear_ticket(datos)
                     creados.append(datos)

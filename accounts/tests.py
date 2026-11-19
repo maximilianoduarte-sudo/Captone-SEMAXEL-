@@ -937,6 +937,10 @@ class EspecialidadOfertaTests(EscenarioEncargadoMixin, TestCase):
         self.ticket_propio.estado = Ticket.Estado.PUBLICADO
         self.ticket_propio.save()
         self.tecnico.especialidades.add(self.electricidad)
+        # Sin trabajos activos: un técnico solo puede tener uno a la vez.
+        OrdenTrabajo.objects.filter(tecnico=self.tecnico).update(
+            estado=OrdenTrabajo.Estado.RESUELTA
+        )
 
         self.entrar(self.tecnico_usuario)
 

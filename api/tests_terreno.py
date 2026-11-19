@@ -230,6 +230,41 @@ class FirmaApiTests(TerrenoBase):
         self.assertEqual(resp.status_code, 400)
 
 
+class UnTrabajoActivoTests(TerrenoBase):
+    """Un técnico solo puede tener un trabajo activo (asignado o en ejecución) a la vez."""
+
+    def setUp(self):
+        super().setUp()
+        self.otra = self.crear_oferta("Otro enchufe quemado", self.cat_electrica)
+
+    def test_con_un_trabajo_activo_no_puede_tomar_otro(self):
+        resp = self.client.post(reverse("api:tomar_oferta", args=[self.otra.pk]))
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.data["codigo"], "trabajo_activo")
+        self.assertIn("Enchufe quemado", resp.data["detail"])
+        self.otra.refresh_from_db()
+        self.assertEqual(self.otra.estado, OfertaTicket.Estado.DISPONIBLE)
+
+    def test_en_ejecucion_tampoco(self):
+        self.iniciar()
+        resp = self.client.post(reverse("api:tomar_oferta", args=[self.otra.pk]))
+        self.assertEqual(resp.data["codigo"], "trabajo_activo")
+
+    def test_al_resolver_puede_tomar_el_siguiente(self):
+        self.iniciar()
+        cambiar_estado_orden(self.orden, OrdenTrabajo.Estado.RESUELTA, self.user,
+                             datos={"trabajo_realizado": "Listo"})
+        resp = self.client.post(reverse("api:tomar_oferta", args=[self.otra.pk]))
+        self.assertEqual(resp.status_code, 201)
+
+    def test_en_la_web_tambien(self):
+        self.client.force_login(self.user)
+        resp = self.client.get(reverse("ofertas:tomar", args=[self.otra.pk]), follow=True)
+        self.assertContains(resp, "Ya tienes un trabajo activo")
+        self.otra.refresh_from_db()
+        self.assertEqual(self.otra.estado, OfertaTicket.Estado.DISPONIBLE)
+
+
 class PerfilInicioYDispositivosApiTests(TerrenoBase):
     def test_cambiar_disponibilidad(self):
         # Tras tomar la oferta el técnico está OCUPADO: no puede cambiarla.

@@ -325,7 +325,9 @@ class TomarOfertaView(APIView):
             "Usa la misma regla que la web (`ofertas.services.tomar_oferta`). "
             "Crea la orden de trabajo ASIGNADA y deja al técnico OCUPADO. "
             "Códigos 409: `no_disponible`, `vencida`, `ticket_no_permite`, "
-            "`sin_especialidad`, `especialidad_no_coincide`."
+            "`sin_especialidad`, `especialidad_no_coincide`, `trabajo_activo` "
+            "(el técnico ya tiene una orden asignada o en ejecución: solo puede "
+            "tener un trabajo activo a la vez)."
         ),
         request=None,
         responses={201: TomarOfertaRespuestaSerializer, 401: R401, 403: R403, 404: R404, 409: R409},

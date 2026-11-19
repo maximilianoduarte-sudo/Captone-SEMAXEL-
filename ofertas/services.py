@@ -16,6 +16,8 @@ class OfertaNoTomable(Exception):
     - "ticket_no_permite": el estado del ticket no permite pasar a ejecución.
     - "sin_especialidad": la categoría del ticket no tiene especialidad definida.
     - "especialidad_no_coincide": el técnico no tiene la especialidad requerida.
+    - "trabajo_activo": el técnico ya tiene una orden asignada o en ejecución
+      (solo puede tener un trabajo activo a la vez).
     """
 
     def __init__(self, mensaje, codigo):
@@ -118,6 +120,10 @@ def tomar_oferta(oferta, tecnico, usuario):
             oferta.fecha_vencimiento and oferta.fecha_vencimiento <= timezone.now()
         )
         if not vencida:
+            # Bloquea también al técnico: si toma dos ofertas al mismo tiempo
+            # (web y app), la segunda espera y ve la primera orden activa.
+            Tecnico.objects.select_for_update().get(pk=tecnico.pk)
+            _validar_sin_trabajo_activo(tecnico)
             _validar_idoneidad(oferta, tecnico)
             return _asignar(oferta, tecnico, usuario)
 
@@ -125,6 +131,24 @@ def tomar_oferta(oferta, tecnico, usuario):
     # después se informe el error.
     expirar_ofertas_vencidas(usuario=usuario)
     raise OfertaNoTomable("Esta oferta venció y ya no está disponible.", "vencida")
+
+
+def _validar_sin_trabajo_activo(tecnico):
+    """Un técnico solo puede tener un trabajo activo (asignado o en ejecución)."""
+    activa = (
+        OrdenTrabajo.objects.filter(
+            tecnico=tecnico,
+            estado__in=(OrdenTrabajo.Estado.ASIGNADA, OrdenTrabajo.Estado.EN_EJECUCION),
+        )
+        .select_related("ticket")
+        .first()
+    )
+    if activa:
+        raise OfertaNoTomable(
+            f"Ya tienes un trabajo activo: “{activa.ticket.titulo}”. "
+            "Termínalo (márcalo como resuelto) antes de tomar otro.",
+            "trabajo_activo",
+        )
 
 
 def _validar_idoneidad(oferta, tecnico):
