@@ -12,8 +12,9 @@ trazo continuo. El video queda declarado como grabación automatizada en la
 bitácora (no se presenta como grabado a mano).
 
 Requisitos: servidor y emulador corriendo (scripts\\levantar-todo.ps1), la
-app instalada y el entorno de QA cargado. Para tener ofertas nuevas:
-scripts\\preparar-datos.ps1 -AgregarTrabajos.
+app instalada y el entorno de QA cargado. Antes de empezar, el guion agrega
+ofertas nuevas y resuelve los trabajos activos de qa_tecnico (un técnico solo
+puede tener un trabajo activo); en el video se muestra esa regla.
 
 Uso:
     python scripts\\grabar-video-app.py                 # graba
@@ -40,6 +41,8 @@ CLAVE_QA = Path(os.environ.get("SEMAXEL_CLAVE_QA", r"D:\herramientas-servidor\cr
 PAQUETE = "cl.semaxel.tecnico"
 USUARIO = "qa_tecnico"
 OFERTA = "Puerta de bodega descuadrada"   # sucursal QA Providencia (con GPS)
+OTRA_OFERTA = "Cortocircuito en vitrina"   # para mostrar la regla de un trabajo activo
+PYTHON_PROYECTO = Path(__file__).resolve().parent.parent / "venv" / "Scripts" / "python.exe"
 GPS_SUCURSAL = (-70.6177, -33.4295)        # longitud, latitud de QA Providencia
 ANCHO, ALTO = 1080, 2400
 
@@ -201,8 +204,32 @@ def clave_qa():
 
 # --------------------------------------------------------------- escenas
 
+def preparar_datos():
+    """Ofertas nuevas y qa_tecnico libre (solo puede tener un trabajo activo).
+
+    Primero se agregan ofertas (con qa_tecnico ocupado no se le agrega un
+    trabajo en ejecución) y después se resuelven sus trabajos activos.
+    """
+    raiz = PYTHON_PROYECTO.parent.parent.parent
+    subprocess.run([str(PYTHON_PROYECTO), "manage.py", "preparar_qa", "--agregar-trabajos"],
+                   cwd=raiz, check=True, capture_output=True)
+    codigo = (
+        "from tickets.models import OrdenTrabajo\n"
+        "from tickets.services import cambiar_estado_orden\n"
+        "for o in OrdenTrabajo.objects.filter(tecnico__usuario__username='qa_tecnico',"
+        " estado__in=['ASIGNADA', 'EN_EJECUCION']):\n"
+        "    u = o.tecnico.usuario\n"
+        "    if o.estado == 'ASIGNADA':\n"
+        "        cambiar_estado_orden(o, 'EN_EJECUCION', u, {'diagnostico': 'Revision previa.'})\n"
+        "    cambiar_estado_orden(o, 'RESUELTA', u, {'trabajo_realizado': 'Trabajo terminado.'})\n"
+    )
+    subprocess.run([str(PYTHON_PROYECTO), "manage.py", "shell", "-c", codigo],
+                   cwd=raiz, check=True, capture_output=True)
+
+
 def preparar():
     """Deja la app en la pantalla de login y el emulador listo (no se graba)."""
+    preparar_datos()
     shell("settings", "put", "system", "show_touches", "1")
     adb("emu", "geo", "fix", str(GPS_SUCURSAL[0]), str(GPS_SUCURSAL[1]))
     shell("pm", "clear", PAQUETE)  # sesión cerrada: el video parte en el login
@@ -249,6 +276,32 @@ def escena_ofertas_y_tomar():
     pausa(1.0, 1.5)
     captura("app05_tomar_confirmar")
     tocar(buscar("Tomar oferta", ultimo=True))  # botón del diálogo
+    buscar("Registrar llegada al local (GPS)", espera=20)
+
+
+def escena_un_trabajo_a_la_vez():
+    """Con un trabajo activo, intenta tomar otra oferta: la app no lo deja."""
+    pausa(1.5, 2.0)
+    # El detalle del trabajo quedó dentro de la pestaña Ofertas: se vuelve con
+    # la flecha hasta llegar al listado.
+    for _ in range(3):
+        if buscar(contiene="oferta(s) de tus especialidades", espera=1, opcional=True):
+            break
+        tocar(buscar(desc="Volver"))
+    buscar(contiene="oferta(s) de tus especialidades")
+    pausa(1.0, 1.5)
+    tocar(buscar(contiene=OTRA_OFERTA))
+    buscar("Detalle de la oferta")
+    pausa(1.0, 1.5)
+    tocar(bajar_hasta("Tomar oferta"))
+    buscar("¿Tomar esta oferta?")
+    pausa(0.8, 1.2)
+    tocar(buscar("Tomar oferta", ultimo=True))
+    subir_hasta(contiene="Ya tienes un trabajo activo")
+    pausa(3.0, 3.8)
+    captura("app05b_trabajo_activo")
+    tocar_texto("Trabajos")
+    tocar(buscar(contiene=OFERTA))
     buscar("Registrar llegada al local (GPS)", espera=20)
 
 
@@ -355,7 +408,8 @@ def escena_cierre():
     pausa(2.5, 3.0)
 
 
-ESCENAS = [escena_login, escena_inicio, escena_ofertas_y_tomar, escena_llegada_e_inicio,
+ESCENAS = [escena_login, escena_inicio, escena_ofertas_y_tomar, escena_un_trabajo_a_la_vez,
+           escena_llegada_e_inicio,
            escena_foto, escena_firma, escena_resolver, escena_cierre]
 
 
