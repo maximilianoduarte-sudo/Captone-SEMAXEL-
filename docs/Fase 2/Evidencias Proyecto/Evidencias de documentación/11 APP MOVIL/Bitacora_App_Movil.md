@@ -57,6 +57,7 @@ Cada parte tiene la misma estructura:
 | 9.8 | WhatsApp a la sucursal, Trabajos como historial por mes, dinero generado en Perfil y sin pestaña Evidencias | `836ae0b` | 210 + 27 de la app | Hecho |
 | 9.9 | Deslizar hacia abajo para actualizar (sin botón "Actualizar") | `61f3acd` | 210 + 27 de la app | Hecho |
 | 9.10 | Web del técnico: solo tomar ofertas y contactar a la sucursal; avanzar trabajos solo en la app | `2b93df3` | 214 + 27 de la app | Hecho |
+| 9.11 | Manual de usuario v2 (con capturas reales y la app) y video de demostración de la app | `d0a1b81` | — | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -1085,6 +1086,63 @@ casos W-24 a W-26 a la Guía de pruebas QA.
 
 ---
 
+## Parte 9.11: manual de usuario v2 y video de demostración (commit `d0a1b81`)
+
+**Pedido.** (1) Dejar más bonito el «Manual de usuario final» (Word),
+agregar lo nuevo, quitar lo que ya no aplica y poner capturas en cada
+sección. (2) Un video de la app funcionando con datos de prueba, que se vea
+como uso humano.
+
+**Manual (`MANUAL DE USUARIO FINAL v2.docx` y `.pdf`).** Se entregó junto al
+original en la carpeta Descargas de Sebastián (el original no se tocó; no
+está en el repositorio).
+
+- **Diseño:** portada con capturas de la web y la app, índice automático,
+  títulos en el azul de SEMAXEL, tablas con encabezado de color, recuadros
+  «Importante», encabezado y pie con número de página. 66 páginas.
+- **45 figuras con capturas reales** tomadas con los datos de QA: reemplazan
+  los 39 espacios «[CAPTURA DE PANTALLA …]» que tenía el original, más las de
+  la app.
+- **Contenido nuevo:** sección 12 «App móvil SEMAXEL Técnico» (iniciar
+  sesión, navegación y deslizar para actualizar, ofertas, llegada con GPS y
+  radio de 150 m, WhatsApp, iniciar, fotos con sus límites, firma, resolver,
+  historial por mes, perfil y problemas frecuentes); la orden vista por el
+  técnico en la web con el contacto de la sucursal; el registro en terreno
+  visible en el detalle de la orden.
+- **Correcciones:** el técnico ya no inicia ni resuelve desde la web
+  (parte 9.10); Gerencia consulta órdenes pero no las cierra ni les cambia el
+  estado (así funciona desde la corrección de la parte 4 y el manual decía lo
+  contrario); las fotos del trabajo van en la orden (desde la app), no solo en
+  el ticket. El dinero generado no se menciona porque está oculto.
+- **Cómo se hizo:** `scripts/capturas-manual-web.py` toma las capturas de la
+  web con Chrome sin ventana (crea la sesión de cada usuario de prueba con
+  Django, sin escribir contraseñas); las de la app salen de
+  `scripts/grabar-video-app.py --ensayo --capturas`. El Word se armó con
+  python-docx y se revisó convertido a PDF con Word.
+
+**Video (`SEMAXEL - demo app tecnico.mp4`, 4 min 40 s, 1080×2400).** También
+en Descargas (no se sube al repositorio por su tamaño, 20 MB).
+
+- Recorre: iniciar sesión, Inicio, Ofertas (deslizar para actualizar), tomar
+  una oferta, llegada con GPS (verificada a 0 m), botón de WhatsApp, iniciar
+  con diagnóstico, foto con la cámara, firma del encargado, resolver, Mis
+  trabajos con el historial por mes, Perfil.
+- **Grabación automatizada, declarada como tal.** La maneja
+  `scripts/grabar-video-app.py` con adb a ritmo humano: toques visibles en
+  pantalla, escritura letra por letra con pausas variables, desplazamientos
+  suaves y la firma dibujada como un trazo continuo. No se presenta como
+  grabado a mano.
+- Datos: entorno de QA (`preparar_qa --agregar-trabajos` para tener ofertas
+  nuevas). Por los ensayos, `qa_tecnico` quedó con muchos trabajos activos de
+  prueba.
+
+**Hallazgo H23.** Al volver de «Fotos de evidencia» al detalle del trabajo,
+el contador seguía en «Fotos de evidencia (0)» aunque la foto se subió: el
+detalle no se recarga al volver (sí lo hacen las pestañas). Se ve en el
+video. Pendiente: recargar el detalle al mostrarse, como las pestañas.
+
+---
+
 ## Referencia rápida de la API
 
 Todas las rutas empiezan con `/api/v1/` y responden JSON. Salvo el login, todas
@@ -1182,3 +1240,4 @@ Cosas encontradas durante el trabajo que quedan registradas para decidir:
 | H20 | En `seed_demo`, las sucursales de Temuco (Centro y Mall Plaza) no tienen coordenadas: la llegada a esas sucursales queda "no verificable" y no sirve para probar el radio de 150 m. | Por decidir (agregar coordenadas hipotéticas) |
 | H21 | La clave de `root` de MySQL del servidor de pruebas quedó visible en la salida de un comando de la sesión con la IA (parte 9.4). No está en Git y MySQL solo escucha en 127.0.0.1. | Cambiar la clave de `root` |
 | H22 | La pestaña Trabajos daba "No se pudo conectar" a ratos: la ventana del servidor quedó en modo selección de Windows y congelaba `runserver`. | Corregido en la parte 9.6 (los scripts desactivan ese modo) |
+| H23 | El detalle del trabajo no se recarga al volver de Fotos o Firma: el contador de fotos queda desactualizado (se ve en el video de la parte 9.11). | Pendiente |
