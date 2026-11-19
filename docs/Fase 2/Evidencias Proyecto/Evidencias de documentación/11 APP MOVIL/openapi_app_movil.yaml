@@ -347,7 +347,9 @@ paths:
       operationId: api_v1_ofertas_tomar_create
       description: 'Usa la misma regla que la web (`ofertas.services.tomar_oferta`).
         Crea la orden de trabajo ASIGNADA y deja al técnico OCUPADO. Códigos 409:
-        `no_disponible`, `vencida`, `ticket_no_permite`, `sin_especialidad`, `especialidad_no_coincide`.'
+        `no_disponible`, `vencida`, `ticket_no_permite`, `sin_especialidad`, `especialidad_no_coincide`,
+        `trabajo_activo` (el técnico ya tiene una orden asignada o en ejecución: solo
+        puede tener un trabajo activo a la vez).'
       summary: Tomar una oferta
       parameters:
       - in: path

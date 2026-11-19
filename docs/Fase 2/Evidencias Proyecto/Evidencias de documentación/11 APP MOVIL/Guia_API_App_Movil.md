@@ -68,7 +68,7 @@ Lista completa de códigos 409:
 
 | Operación | Códigos |
 |---|---|
-| Tomar oferta | `no_disponible`, `vencida`, `ticket_no_permite`, `sin_especialidad`, `especialidad_no_coincide` |
+| Tomar oferta | `no_disponible`, `vencida`, `ticket_no_permite`, `sin_especialidad`, `especialidad_no_coincide`, `trabajo_activo` (ya tiene una orden asignada o en ejecución: un trabajo activo a la vez) |
 | Iniciar / resolver | `sin_cambio`, `transicion_invalida`, `sin_permiso`, `falta_diagnostico`, `falta_trabajo` |
 | Llegada, fotos y firma | `sin_permiso`, `orden_no_activa`, `llegada_ya_registrada`, `limite_evidencias`, `firma_ya_registrada` |
 | Disponibilidad | `tecnico_ocupado`, `tecnico_inactivo` |

@@ -58,6 +58,7 @@ Cada parte tiene la misma estructura:
 | 9.9 | Deslizar hacia abajo para actualizar (sin botón "Actualizar") | `61f3acd` | 210 + 27 de la app | Hecho |
 | 9.10 | Web del técnico: solo tomar ofertas y contactar a la sucursal; avanzar trabajos solo en la app | `2b93df3` | 214 + 27 de la app | Hecho |
 | 9.11 | Manual de usuario v2 (con capturas reales y la app) y video de demostración de la app | `d0a1b81` | — | Hecho |
+| 9.12 | Un técnico solo puede tener un trabajo activo a la vez | `a7cf872` | 219 + 27 de la app | Hecho |
 | 10 | Prueba de la app en un celular y QA final | — | — | Pendiente |
 
 Con la parte 5 **la API quedó completa** y con la parte 7 **la app cubre todo
@@ -1143,6 +1144,48 @@ defecto (`--velocidad`).
 el contador seguía en «Fotos de evidencia (0)» aunque la foto se subió: el
 detalle no se recarga al volver (sí lo hacen las pestañas). Se ve en el
 video. Pendiente: recargar el detalle al mostrarse, como las pestañas.
+
+---
+
+## Parte 9.12: un técnico, un trabajo activo (commit `a7cf872`)
+
+**Pedido.** Que un técnico solo pueda tener un trabajo activo a la vez.
+
+**Regla.** «Activo» es una orden **Asignada** o **En ejecución**. Al
+resolverla (Resuelta), el técnico ya puede tomar otra; no tiene que esperar
+a que el encargado la cierre.
+
+**Qué se hizo.**
+
+- En `ofertas/services.py` (`tomar_oferta`, la única regla de «tomar
+  oferta», que usan la web y la API): si el técnico ya tiene una orden activa
+  se rechaza con el mensaje «Ya tienes un trabajo activo: “…”. Termínalo
+  (márcalo como resuelto) antes de tomar otro.» y el código `trabajo_activo`
+  (409 en la API). La app y la web ya mostraban el mensaje de error del
+  servidor, así que no hubo que cambiarlas.
+- Se bloquea también la fila del técnico durante la toma: si toma dos ofertas
+  al mismo tiempo (por ejemplo, web y app), la segunda espera y ve la orden
+  de la primera.
+- **Datos de QA (`preparar_qa`):** antes `qa_tecnico` tenía dos activos.
+  Ahora tiene uno (QA-00008, en ejecución) y QA-00005 pasó a ser una oferta
+  para probar la regla; QA-00013 de `qa_tecnico2` quedó asignada (sigue
+  habiendo órdenes en todos los estados). Los trabajos activos se crean al
+  final, después de los terminados. `--agregar-trabajos` ahora suma 7
+  ofertas y un trabajo en ejecución solo si `qa_tecnico` está libre.
+- Documentación: código `trabajo_activo` en la guía de la API y en el
+  esquema OpenAPI; regla agregada al Manual de usuario v2.
+
+**Verificación (18-11-2026).** 5 pruebas nuevas: con un trabajo asignado o en
+ejecución no puede tomar otro (409 `trabajo_activo`, la oferta sigue
+disponible); al resolverlo, sí; en la web también; `preparar_qa` deja un solo
+activo por técnico. Se ajustó una prueba antigua cuyo técnico ya tenía una
+orden asignada. 219 pruebas de Django, todas pasan. En el emulador,
+`qa_tecnico` intentó tomar una oferta y la app mostró el mensaje.
+
+**Ojo con la base de pruebas actual:** `qa_tecnico` tiene decenas de trabajos
+activos creados antes de la regla (ensayos del video). No puede tomar ofertas
+hasta resolverlos todos; `preparar_qa` reinicia los datos de QA con un solo
+activo. El guion del video necesita a `qa_tecnico` libre para tomar la oferta.
 
 ---
 
