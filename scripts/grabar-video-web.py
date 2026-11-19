@@ -456,7 +456,8 @@ def main():
     global g
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--salida", default=str(Path.home() / "Downloads" / "SEMAXEL - demo web.mp4"))
-    p.add_argument("--velocidad", type=float, default=1.0)
+    p.add_argument("--velocidad", type=float, default=1.6,
+                   help="Velocidad del video final (1 = tiempo real).")
     args = p.parse_args()
 
     random.seed()

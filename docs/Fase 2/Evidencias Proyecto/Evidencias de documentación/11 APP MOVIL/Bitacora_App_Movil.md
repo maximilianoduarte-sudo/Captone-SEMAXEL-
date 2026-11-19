@@ -1242,7 +1242,7 @@ monitor: la grabación no depende de la pantalla (Chrome graba sin ventana),
 pero ahora el video convierte el rango completo de los cuadros al rango de
 video y queda etiquetado como BT.709 (SDR), para que los reproductores
 muestren bien el color. Esta grabación creó otro ticket «Enchufe sin
-corriente en caja 3» y generó tickets preventivos en los datos de QA.
+corriente en caja 3» y generó tickets preventivos en los datos de QA. Después se dejó a **velocidad 1,6×** (`SEMAXEL - demo web.mp4`, 2 min 52 s); la versión a velocidad normal quedó como `… (velocidad normal).mp4`. El guion usa 1,6× por defecto (`--velocidad`).
 
 ---
 
