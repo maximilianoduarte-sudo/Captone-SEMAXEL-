@@ -983,6 +983,15 @@ Kotlin y Compose) y Sebastián lo aprobó.
 **Ideas para el lugar de Evidencias** (pendiente de decidir): ver el final
 de esta parte.
 
+**Actualización: dinero oculto por ahora (commit `e296831`).** Sebastián pidió
+sacar "lo de la plata" por ahora. La app ya no muestra las métricas de dinero
+en Perfil ni los montos del historial (total del mes y costo de cada trabajo).
+Se ocultó con un interruptor, `MOSTRAR_DINERO = false` en
+`ui/comun/Formato.kt`, para poder volver a mostrarlo sin rehacer nada. El
+servidor sigue entregando `ganancias` en el perfil (la API no cambia) y las
+pruebas siguen cubriendo el cálculo. El detalle del trabajo mantiene el costo
+estimado y el costo final, que son datos del trabajo y ya estaban antes.
+
 **Verificación (18-11-2026).**
 
 - Servidor: prueba nueva `test_perfil_muestra_ganancias_del_mes_anio_y_total`
