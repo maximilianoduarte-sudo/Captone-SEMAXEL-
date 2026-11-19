@@ -1193,6 +1193,15 @@ manuales y los ensayos del video) y se crearon los 20 del escenario. Quedan
 dos trabajos activos: QA-00008 de `qa_tecnico` (en ejecución) y QA-00013 de
 `qa_tecnico2` (asignada). La contraseña de los usuarios `qa_*` no cambió.
 
+**Video grabado de nuevo con la regla (commit `76d9a95`).** El guion ahora, antes
+de grabar, agrega ofertas y resuelve los trabajos activos de `qa_tecnico`
+para que pueda tomar una. Escena nueva: con el trabajo recién tomado intenta
+tomar otra oferta y la app muestra «Ya tienes un trabajo activo…». Se grabó a
+velocidad normal (4 min 52 s, `… (velocidad normal).mp4`) y se generó la
+versión a 1,6× (3 min 2 s, `SEMAXEL - demo app tecnico.mp4`), ambos en
+Descargas. Sigue visible H23 (el contador de fotos del detalle no se
+actualiza al volver).
+
 ---
 
 ## Referencia rápida de la API
