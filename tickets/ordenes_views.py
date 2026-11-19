@@ -13,6 +13,7 @@ from accounts.roles import (
 )
 from tecnicos.models import Tecnico
 
+from .contacto import contacto_sucursal
 from .forms import CambioEstadoOrdenForm
 from .models import FirmaConformidad, OrdenTrabajo
 from .services import (
@@ -57,9 +58,13 @@ def detalle(request, oid):
     if not _acceso_orden(request.user, orden):
         raise PermissionDenied
     # Solo se ofrecen las transiciones que este usuario puede aplicar
-    # (el técnico no cierra ni cancela; Gerencia no aplica ninguna).
-    permitidos = transiciones_permitidas(request.user, orden)
+    # (Gerencia no aplica ninguna). El técnico tampoco en la web: sus
+    # trabajos se avanzan desde la app; aquí solo ve la orden y el contacto.
+    tecnico = _es_tecnico(request.user)
+    permitidos = set() if tecnico else transiciones_permitidas(request.user, orden)
     context = {
+        "es_tecnico": tecnico,
+        "contacto": contacto_sucursal(orden) if tecnico else None,
         "orden": orden,
         "firma": FirmaConformidad.objects.filter(orden=orden).first(),
         "estados": dict(OrdenTrabajo.Estado.choices),
@@ -85,7 +90,9 @@ def cambiar_estado(request, oid):
     orden = get_object_or_404(
         OrdenTrabajo.objects.select_related("ticket", "tecnico"), pk=oid
     )
-    if not _acceso_orden(request.user, orden):
+    if not _acceso_orden(request.user, orden) or _es_tecnico(request.user):
+        # El técnico avanza sus trabajos solo desde la app (llegada con GPS,
+        # fotos y firma); la web solo le sirve para tomar ofertas y contactar.
         raise PermissionDenied
     if request.method != "POST":
         return redirect("ordenes:detalle", oid=orden.pk)
@@ -113,6 +120,10 @@ def cambiar_estado(request, oid):
         etiqueta = dict(OrdenTrabajo.Estado.choices)[destino]
         messages.success(request, f"Orden actualizada: {etiqueta}.")
     return redirect("ordenes:detalle", oid=orden.pk)
+
+
+def _es_tecnico(user):
+    return not user.is_superuser and rol_usuario(user) == Usuario.Rol.TECNICO
 
 
 def _acceso_orden(user, orden):

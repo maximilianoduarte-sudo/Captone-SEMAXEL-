@@ -201,6 +201,48 @@ class GerenciaOrdenWebTests(EscenarioOrdenMixin, TestCase):
         self.assertEqual(self.orden.estado, OrdenTrabajo.Estado.CANCELADA)
 
 
+class TecnicoEnLaWebTests(EscenarioOrdenMixin, TestCase):
+    """En la web el técnico solo toma ofertas y contacta a la sucursal; sus
+    trabajos se avanzan desde la app."""
+
+    def setUp(self):
+        super().setUp()
+        self.ticket.sucursal.telefono = "+56 9 1234 5678"
+        self.ticket.sucursal.save()
+        self.client.login(username="tecnico1", password=CLAVE)
+
+    def test_ve_su_orden_con_el_contacto_y_sin_transiciones(self):
+        resp = self.client.get(reverse("ordenes:detalle", args=[self.orden.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(list(resp.context["form_estado"].fields["estado"].choices), [])
+        self.assertContains(resp, "https://wa.me/56912345678?text=Hola")
+        self.assertContains(resp, "tel:+56912345678")
+        self.assertContains(resp, "se avanza desde la app")
+
+    def test_no_puede_avanzar_la_orden_por_post(self):
+        resp = self.client.post(
+            reverse("ordenes:cambiar_estado", args=[self.orden.pk]),
+            {"estado": OrdenTrabajo.Estado.EN_EJECUCION, "diagnostico": "x"},
+        )
+        self.assertEqual(resp.status_code, 403)
+        self.recargar()
+        self.assertEqual(self.orden.estado, OrdenTrabajo.Estado.ASIGNADA)
+
+    def test_no_puede_cambiar_el_estado_del_ticket(self):
+        resp = self.client.post(
+            reverse("tickets:cambiar_estado", args=[self.ticket.numero]),
+            {"estado": Ticket.Estado.EN_EJECUCION, "comentario": ""},
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_numero_whatsapp(self):
+        from tickets.contacto import numero_whatsapp
+
+        self.assertEqual(numero_whatsapp("+56 9 1234 5678"), "56912345678")
+        self.assertEqual(numero_whatsapp("912345678"), "56912345678")
+        self.assertIsNone(numero_whatsapp(""))
+
+
 class RegistroEnTerrenoWebTests(EscenarioOrdenMixin, TestCase):
     """El encargado ve en la web lo que el técnico registró desde la app."""
 

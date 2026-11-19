@@ -228,9 +228,7 @@ def publicar_oferta(request, numero):
 
 
 @login_required
-@rol_requerido(
-    Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO, Usuario.Rol.TECNICO
-)
+@rol_requerido(Usuario.Rol.ADMIN, Usuario.Rol.GESTOR, Usuario.Rol.ENCARGADO)
 def cambiar_estado(request, numero):
     """Cambia el estado de un ticket y registra el cambio en el historial."""
     ticket = get_object_or_404(Ticket, numero=numero)

@@ -176,10 +176,44 @@
                 </div>
             </div>
 
+            {% if contacto %}
+            <div class="card mb-3">
+                <div class="card-header bg-white"><strong><i class="bi bi-chat-dots me-1"></i>Contacto con la sucursal</strong></div>
+                <div class="card-body">
+                    <div class="fw-semibold">{{ contacto.sucursal.nombre }}</div>
+                    <div class="text-muted small mb-3">{{ contacto.sucursal.direccion }}</div>
+                    {% if contacto.enlace_whatsapp %}
+                    <a href="{{ contacto.enlace_whatsapp }}" target="_blank" rel="noopener" class="btn btn-success w-100 mb-2">
+                        <i class="bi bi-whatsapp me-1"></i> Escribir por WhatsApp
+                    </a>
+                    <a href="{{ contacto.enlace_telefono }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-telephone me-1"></i> Llamar: {{ contacto.telefono }}
+                    </a>
+                    {% else %}
+                    <p class="text-muted small">La sucursal no tiene un teléfono registrado.</p>
+                    {% endif %}
+                    {% if contacto.correo %}
+                    <a href="mailto:{{ contacto.correo }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-envelope me-1"></i> {{ contacto.correo }}
+                    </a>
+                    {% endif %}
+                    {% for encargado in contacto.encargados %}
+                    <div class="small text-muted">Encargado: {{ encargado.get_full_name|default:encargado.username }}{% if encargado.email %} · <a href="mailto:{{ encargado.email }}">{{ encargado.email }}</a>{% endif %}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card">
                 <div class="card-header bg-white"><strong><i class="bi bi-lightning-charge me-1"></i>Acciones</strong></div>
                 <div class="card-body">
-                    {% if orden_terminal %}
+                    {% if es_tecnico and not orden_terminal %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-phone me-1"></i>
+                        Este trabajo se avanza desde la app <strong>SEMAXEL Técnico</strong>:
+                        registrar la llegada, iniciar, subir fotos, pedir la firma y resolver.
+                    </div>
+                    {% elif orden_terminal %}
                     <p class="text-muted mb-0">Esta orden está {{ orden.estado|estado_label|lower }}, no admite más cambios.</p>
                     {% elif form_estado.fields.estado.choices %}
                     <form method="post" action="{% url 'ordenes:cambiar_estado' orden.pk %}">
