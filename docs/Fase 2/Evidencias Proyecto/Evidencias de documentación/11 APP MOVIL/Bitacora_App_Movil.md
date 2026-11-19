@@ -1209,7 +1209,7 @@ actualiza al volver).
 
 **Pedido.** Grabar un video de la web a velocidad normal.
 
-**Resultado.** `SEMAXEL - demo web.mp4` (3 min 29 s, 1440×900, 5 MB), en
+**Resultado.** `SEMAXEL - demo web.mp4` (1440×900), en
 Descargas (no se sube al repositorio). Recorre el ciclo de un trabajo en la
 web con tres roles y datos de QA:
 
@@ -1232,6 +1232,17 @@ deja libre a `qa_tecnico` (un trabajo activo a la vez).
 **Efecto en los datos de QA.** Quedó creado el ticket «Enchufe sin corriente
 en caja 3», tomado por `qa_tecnico` (que queda con ese trabajo activo), y
 cerrado con calificación el trabajo «Puerta de bodega descuadrada».
+
+**Segunda versión (commit `46a7339`).** A pedido de Sebastián se volvió a grabar
+(4 min 35 s) con una escena nueva después del encargado: **administrador
+(`qa_admin`)** recorre Usuarios, Empresa (detalle con SLA), Sucursales,
+Técnicos (ficha de `qa_tecnico`) y Mantenimiento, donde genera los
+preventivos vencidos. Sebastián vio el video muy brillante por el HDR de su
+monitor: la grabación no depende de la pantalla (Chrome graba sin ventana),
+pero ahora el video convierte el rango completo de los cuadros al rango de
+video y queda etiquetado como BT.709 (SDR), para que los reproductores
+muestren bien el color. Esta grabación creó otro ticket «Enchufe sin
+corriente en caja 3» y generó tickets preventivos en los datos de QA.
 
 ---
 
