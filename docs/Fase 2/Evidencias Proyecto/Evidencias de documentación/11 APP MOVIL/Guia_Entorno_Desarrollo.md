@@ -1,0 +1,304 @@
+# Guía del entorno de desarrollo: servidor y app móvil
+
+Cómo está preparado el equipo Windows donde se desarrolla la app móvil del
+técnico y cómo reproducirlo en otro equipo. Complementa la
+[Bitácora](Bitacora_App_Movil.md) (qué se hizo y por qué) y la
+[Guía de la API](Guia_API_App_Movil.md) (cómo se usa la API).
+
+Fecha de la última actualización: 15-11-2026.
+
+---
+
+## 1. Resumen del equipo
+
+| Elemento | Estado en el equipo Windows |
+|---|---|
+| Sistema | Windows 10 |
+| Disco C: | Tenía **≈0,2 GB libres** al instalar las herramientas (14-11-2026); después quedó en ≈4 GB y, al borrar un emulador antiguo (15-11-2026), en ≈11,7 GB. Por eso todas las herramientas nuevas, cachés y temporales se instalaron en D:. |
+| Repositorio | `D:\proyecto_semaxel`, rama `feature/app-movil` |
+| Python | 3.13, con entorno virtual en `D:\proyecto_semaxel\venv` (no se sube a Git) |
+| MySQL | 8.4.3 LTS en `D:\herramientas-servidor\` desde el 15-11-2026 (ver la [Guía del servidor de pruebas](Guia_Servidor_Pruebas.md)) |
+| Herramientas Android | `D:\herramientas-android\` (JDK 21, Gradle 8.11.1, SDK de Android 35) |
+| Android Studio | Rabbit 2 (2026.2.2) en `D:\herramientas-android\android-studio` desde el 18-11-2026 (ver 3.7) |
+| Emulador de Android | 37.2.13 con imagen Android 15 (API 35, Google APIs) desde el 15-11-2026 (ver 3.6) |
+
+---
+
+## 2. Servidor Django
+
+### 2.1 Instalación
+
+```bash
+cd D:\proyecto_semaxel
+python -m venv venv
+venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+`requirements.txt` incluye, además de Django y MySQL, las dependencias de la
+API: `djangorestframework`, `drf-spectacular` (documentación OpenAPI) y
+`Pillow` (validación de imágenes).
+
+### 2.2 Variables de entorno (`.env`)
+
+El proyecto lee un archivo `.env` en la raíz (no se sube a Git). Variables
+mínimas:
+
+| Variable | Ejemplo | Para qué |
+|---|---|---|
+| `SECRET_KEY` | (texto largo y aleatorio) | Obligatoria: sin ella Django no arranca. |
+| `DEBUG` | `True` en desarrollo | Con `True`, Django sirve las fotos subidas (`/media/`). |
+| `ALLOWED_HOSTS` | `localhost,127.0.0.1,192.168.1.50` | Agregar la IP o el dominio por el que entra el celular. |
+| `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT` | `capstone_semaxel`, `root`, … | Conexión a MySQL. |
+| `SEMAXEL_RADIO_LLEGADA_METROS` | `150` | Radio para verificar la llegada con GPS (opcional). |
+| `SEMAXEL_PUSH_BACKEND` | `consola` | `fcm` cuando Firebase esté configurado (opcional). |
+| `FCM_CREDENTIALS_FILE` | `D:\secretos\firebase.json` | Solo con `fcm` (opcional). |
+
+La plantilla con todas las variables es `.env.example`, en la raíz del
+repositorio (se agregó el 15-11-2026; antes no existía).
+
+### 2.3 Base de datos
+
+El proyecto usa MySQL 8. Hasta el 15-11-2026 este equipo no tenía MySQL, así
+que durante el desarrollo de la API las pruebas se ejecutaron con SQLite en
+memoria mediante un archivo de configuración temporal, que no se sube a Git
+(sigue siendo útil para correr las pruebas rápido sin MySQL):
+
+```python
+# settings_local_sqlite.py (fuera del repositorio)
+from config.settings import *  # noqa
+
+DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": ":memory:"}}
+```
+
+```bash
+set SECRET_KEY=solo-pruebas-locales
+set PYTHONPATH=<carpeta donde está settings_local_sqlite.py>
+venv\Scripts\python.exe manage.py test --settings=settings_local_sqlite
+```
+
+Para levantar un servidor de prueba con datos de demostración se usó la misma
+idea, pero con SQLite en un archivo, `DEBUG = True` y `MEDIA_ROOT` propio:
+
+```bash
+venv\Scripts\python.exe manage.py migrate --settings=settings_demo_sqlite
+venv\Scripts\python.exe manage.py seed_demo --settings=settings_demo_sqlite
+venv\Scripts\python.exe manage.py runserver 0.0.0.0:8000 --settings=settings_demo_sqlite
+```
+
+`seed_demo` crea usuarios de prueba (técnicos `cdiaz`, `atorres`,
+`lfernandez`), sucursales con coordenadas y horario hipotéticos, tickets y
+ofertas. Al terminar muestra en la consola la contraseña común de esos
+usuarios.
+
+**Hecho (parte 9 de la bitácora):** MySQL 8.4.3 instalado, `.env` creado,
+`migrate` aplicado y las 195 pruebas pasan sobre MySQL. El detalle está en la
+[Guía del servidor de pruebas](Guia_Servidor_Pruebas.md).
+
+### 2.4 Comandos útiles
+
+| Para qué | Comando |
+|---|---|
+| Pruebas | `venv\Scripts\python.exe manage.py test` |
+| Revisar que no falten migraciones | `venv\Scripts\python.exe manage.py makemigrations --check --dry-run` |
+| Regenerar el esquema OpenAPI | `venv\Scripts\python.exe manage.py spectacular --file "docs/Fase 2/Evidencias Proyecto/Evidencias de documentación/11 APP MOVIL/openapi_app_movil.yaml"` |
+| Documentación interactiva | Con el servidor corriendo: `http://localhost:8000/api/v1/docs/` |
+
+---
+
+## 3. App Android
+
+### 3.1 Qué se instaló (14-11-2026)
+
+Todo quedó en `D:\herramientas-android\`, sin instalar Android Studio ni
+cambiar la configuración del sistema:
+
+| Herramienta | Versión | Origen | Carpeta |
+|---|---|---|---|
+| JDK (Eclipse Temurin) | 21.0.13 | api.adoptium.net | `jdk\jdk-21.0.13+9` |
+| Gradle | 8.11.1 (SHA-256 verificado con el publicado por Gradle) | services.gradle.org | `gradle-8.11.1` |
+| Android command-line tools | 11076708 | dl.google.com | `sdk\cmdline-tools\latest` |
+| Android SDK Platform | 35 | sdkmanager | `sdk\platforms\android-35` |
+| Build-Tools | 35.0.0 y 34.0.0 (la 34 la pidió Gradle automáticamente) | sdkmanager | `sdk\build-tools` |
+| Platform-Tools (adb) | la vigente | sdkmanager | `sdk\platform-tools` |
+
+Para instalar los paquetes del SDK, `sdkmanager` exige aceptar la licencia del
+SDK de Android de Google. Se aceptó con la autorización de Sebastián Maturana.
+
+Además se creó `D:\herramientas-android\entorno.ps1`, que configura las
+variables solo para la consola donde se ejecuta (no cambia nada del sistema):
+
+```powershell
+$base = 'D:\herramientas-android'
+$env:JAVA_HOME = "$base\jdk\jdk-21.0.13+9"
+$env:ANDROID_HOME = "$base\sdk"
+$env:ANDROID_SDK_ROOT = "$base\sdk"
+$env:ANDROID_USER_HOME = "$base\android-user"   # en vez de C:\Users\...\.android
+$env:ANDROID_AVD_HOME = "$base\android-user\avd"   # dispositivos virtuales (15-11-2026)
+$env:GRADLE_USER_HOME = "$base\gradle-home"     # caché de Gradle fuera de C:
+$env:TEMP = "$base\tmp"
+$env:TMP = "$base\tmp"
+$env:Path = "$env:JAVA_HOME\bin;$base\gradle-8.11.1\bin;$base\sdk\cmdline-tools\latest\bin;$base\sdk\platform-tools;$base\sdk\emulator;$env:Path"
+```
+
+¿Por qué JDK 21 si el equipo ya tenía el JDK 25? Gradle 8.11 no puede
+ejecutarse con Java 25; el JDK 21 es la versión con soporte largo compatible
+con Gradle y con el plugin de Android.
+
+### 3.2 Compilar y probar
+
+```powershell
+. D:\herramientas-android\entorno.ps1
+cd D:\proyecto_semaxel\app-movil
+.\gradlew.bat assembleDebug testDebugUnitTest
+```
+
+- APK generado: `app-movil\app\build\outputs\apk\debug\app-debug.apk`.
+- Resultados de las pruebas: `app-movil\app\build\reports\tests\testDebugUnitTest\index.html`.
+- La primera compilación descarga las bibliotecas (unos minutos); quedan en
+  `D:\herramientas-android\gradle-home`.
+
+### 3.3 Prueba de contrato contra el servidor
+
+La prueba `ContratoApiTest` usa la capa de datos real de la app contra un
+servidor SEMAXEL. Se ejecutó así el 14-11-2026 (pasó):
+
+```powershell
+# 1. Servidor de demostración con datos recién cargados (ver 2.3)
+venv\Scripts\python.exe manage.py migrate --settings=settings_demo_sqlite
+venv\Scripts\python.exe manage.py seed_demo --settings=settings_demo_sqlite
+venv\Scripts\python.exe manage.py runserver 127.0.0.1:8765 --settings=settings_demo_sqlite
+
+# 2. En otra consola
+. D:\herramientas-android\entorno.ps1
+cd D:\proyecto_semaxel\app-movil
+.\gradlew.bat testDebugUnitTest --tests "cl.semaxel.tecnico.data.ContratoApiTest" "-Psemaxel.apiContrato=http://127.0.0.1:8765/" "-Psemaxel.usuarioContrato=cdiaz" "-Psemaxel.claveContrato=CLAVE_DE_SEED_DEMO"
+```
+
+En PowerShell, cada argumento `-P...` va entre comillas: sin ellas, PowerShell
+corta el argumento en el punto y Gradle falla con "Cannot locate tasks".
+
+### 3.4 Reproducir en otro equipo
+
+- **Con Android Studio (por ejemplo, el Mac):** abrir la carpeta `app-movil/`;
+  Android Studio usa el `gradlew` del proyecto e instala lo que falte del SDK.
+- **Sin Android Studio:** instalar JDK 21 y las command-line tools, ejecutar
+  `sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"` y
+  luego `./gradlew assembleDebug`.
+
+### 3.5 Dirección del servidor
+
+Se define en `app-movil/gradle.properties` (`semaxel.apiUrl`) y queda dentro
+del APK al compilar:
+
+- Emulador: `http://10.0.2.2:8000/` (es el `localhost` del computador).
+- Celular en la misma red Wi-Fi: `http://<IP del computador>:8000/`.
+- Servidor publicado: su dominio o IP pública (parte 9 de la bitácora).
+
+### 3.6 Emulador de Android (15-11-2026)
+
+Permite usar la app en pantalla sin celular y **sin abrir el firewall**: el
+emulador llega al computador por la dirección especial `10.0.2.2`, que es la
+que la app usa por defecto.
+
+**Qué se instaló** (con `sdkmanager`, en `D:\herramientas-android\sdk`):
+
+| Paquete | Versión | Tamaño | Carpeta |
+|---|---|---|---|
+| Emulador de Android | 37.2.13 | 1,1 GB | `sdk\emulator` |
+| Imagen Android 15 (API 35) con Google APIs, x86_64 | revisión 9 | 3,5 GB | `sdk\system-images\android-35\google_apis\x86_64` |
+
+Se eligió la imagen **con Google APIs** porque la app usa los servicios de
+ubicación de Google (`play-services-location`) para el GPS.
+
+**Aceleración.** El emulador necesita la virtualización del procesador. Este
+equipo (Ryzen 7 7800X3D) ya tenía activa la "Plataforma del hipervisor de
+Windows" (WHPX): `emulator -accel-check` respondió *"WHPX(10.0.19045) is
+installed and usable"*. No hubo que cambiar nada de Windows ni reiniciar.
+
+**Dispositivo virtual** `SEMAXEL_Pixel7_API35`, creado con `avdmanager` en
+`D:\herramientas-android\android-user\avd` (no en C:). Se ajustó su `config.ini`:
+
+| Ajuste | Valor | Por qué |
+|---|---|---|
+| `hw.ramSize` | 4096M | Con 1,5 GB (valor por defecto) Android 15 anda lento. |
+| `disk.dataPartition.size` | 6G | Espacio para la app y las fotos. |
+| `hw.keyboard` | yes | Escribir con el teclado del computador. |
+| `hw.gpu.enabled` | yes | Dibujo por la tarjeta de video. |
+| `hw.camera.back` | virtualscene | La cámara trasera muestra una escena 3D: sirve para probar las fotos. |
+
+**Cómo usarlo:**
+
+Forma rápida (desde la parte 9.4): `.\scripts\levantar-todo.ps1 -InstalarApp`
+levanta MySQL, el servidor y el emulador, y compila, instala y abre la app.
+`.\scripts\apagar-todo.ps1` apaga todo. Paso a paso:
+
+1. Iniciar MySQL y el servidor (`scripts\iniciar-mysql.ps1` y
+   `scripts\iniciar-servidor.ps1`).
+2. Iniciar el emulador: `scripts\iniciar-emulador.ps1`.
+3. Compilar e instalar la app (apunta a `10.0.2.2:8000` por defecto), con
+   `scripts\instalar-app.ps1` o a mano:
+
+   ```powershell
+   . D:\herramientas-android\entorno.ps1
+   cd D:\proyecto_semaxel\app-movil
+   .\gradlew.bat installDebug
+   ```
+
+4. En el `.env` del servidor, `ALLOWED_HOSTS` debe incluir `10.0.2.2`.
+
+**Probar el GPS y la cámara:** en la barra lateral del emulador, "⋯"
+(Extended controls) → *Location* permite fijar latitud y longitud (por
+ejemplo, la de la sucursal, para probar la llegada dentro y fuera de los
+150 m). La cámara trasera muestra la escena virtual; la firma se dibuja con el
+mouse.
+
+**Lo que el emulador no reemplaza:** las notificaciones push (Firebase aún no
+está configurado) y una cámara y un GPS reales. Conviene una pasada final en
+un celular.
+
+**Dispositivo antiguo en C: (borrado).** En `C:\Users\<usuario>\.android\avd`
+había un emulador `Medium_Phone_API_35` de diciembre de 2024, de una
+instalación anterior de Android Studio, que ocupaba 5,1 GB en C:. Se borró el
+15-11-2026 a pedido de Sebastián (solo esa carpeta y su `.ini`; las claves de
+`adb` y el keystore de depuración de `.android` no se tocaron). C: pasó de
+6,6 GB a 11,7 GB libres.
+
+### 3.7 Android Studio (18-11-2026)
+
+Se instaló para acelerar los cambios en la app: **Live Edit** (los cambios
+visuales se ven en el emulador sin reinstalar), vista previa de pantallas,
+**Logcat** y depurador.
+
+| Qué | Dónde / cómo |
+|---|---|
+| Versión | Android Studio Rabbit 2 (2026.2.2.8, 28-10-2026), la estable más reciente |
+| Instalación | ZIP oficial descomprimido en `D:\herramientas-android\android-studio` (sin instalador: no cambia Windows) |
+| Verificación | SHA-256 `a05e6742…0fd123` igual al publicado; `studio64.exe` con firma digital válida de Google LLC |
+| Configuración, cachés y registros | `D:\herramientas-android\android-studio-datos` (por defecto irían a C:) |
+| SDK, emulador y JDK para Gradle | Los mismos de `D:\herramientas-android` (no se descargó otro SDK) |
+
+**Abrirlo siempre con `scripts\abrir-android-studio.cmd`**, no desde el menú
+Inicio. El script:
+
+1. carga `entorno.ps1` (SDK, `ANDROID_AVD_HOME` para ver el emulador de
+   SEMAXEL, `GRADLE_USER_HOME` en D:);
+2. crea `android-studio-datos\idea.properties` y apunta `STUDIO_PROPERTIES` a
+   ese archivo, para que la configuración y las cachés queden en D:;
+3. fija el JDK con que Studio ejecuta Gradle (`app-movil\.gradle\config.properties`,
+   no versionado) al JDK 21 de D:. En la primera apertura Studio había
+   descargado su propio JDK (457 MB) a `C:\Users\<usuario>\.jdks`; se cambió
+   al de D: y esa copia se borró.
+
+Los pasos para ejecutar la app desde Studio están en el README ("Desarrollar
+la app en Android Studio").
+
+---
+
+## 4. Problemas conocidos del entorno
+
+| Problema | Efecto | Qué hacer |
+|---|---|---|
+| Disco C: casi lleno | Programas que escriben en C: (caché, temporales) pueden fallar. | Liberar espacio en C:; mientras tanto, usar `entorno.ps1`. |
+| Word por automatización se quedó colgado una vez | La conversión de Word a PDF para revisar los documentos falló la primera vez. | Se resolvió copiando el archivo a una ruta sin tildes antes de abrirlo. |
+| Sin MySQL (hasta el 15-11-2026) | Las pruebas no se habían ejecutado sobre la base real. | Resuelto: MySQL 8.4.3 instalado y 195 pruebas en verde. |
+| Sin emulador (hasta el 15-11-2026) | La app no se había probado en pantalla. | Resuelto: emulador instalado (sección 3.6). |

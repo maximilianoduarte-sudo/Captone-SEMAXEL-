@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carpetas que la app comparte con la cámara del sistema (solo temporales). -->
+<paths>
+    <cache-path name="fotos" path="fotos/" />
+</paths>

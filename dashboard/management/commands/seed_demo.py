@@ -11,6 +11,8 @@ Uso:
 Es idempotente: si los datos ya existen no los duplica.
 """
 
+from datetime import time
+
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
@@ -21,7 +23,7 @@ from mantenimiento import models as _mantenimiento  # noqa: F401
 from mantenimiento.models import PlanMantenimiento
 from ofertas.models import OfertaTicket
 from sla.models import SLAPolicy
-from sucursales.models import Sucursal
+from sucursales.models import HorarioSucursal, Sucursal
 from tecnicos.models import Especialidad, Tecnico
 from tickets.models import Calificacion, Categoria, OrdenTrabajo, Ticket, TicketHistorial
 
@@ -156,6 +158,29 @@ class Command(BaseCommand):
         sucursales["Ñuñoa"].encargados.add(admin_user)
         sucursales["Las Condes"].estado = "INACTIVA"
         sucursales["Las Condes"].save()
+
+        # Coordenadas y horario (hipotéticos, aproximados a cada comuna) para
+        # probar la llegada con GPS de la app del técnico.
+        coordenadas = {
+            "Providencia": ("-33.429500", "-70.617700"),
+            "Santiago Centro": ("-33.439400", "-70.650800"),
+            "Ñuñoa": ("-33.455000", "-70.595900"),
+            "Las Condes": ("-33.413600", "-70.583300"),
+        }
+        for nombre, (lat, lon) in coordenadas.items():
+            suc = sucursales[nombre]
+            if suc.latitud is None:
+                suc.latitud, suc.longitud = lat, lon
+                suc.save(update_fields=["latitud", "longitud"])
+            for dia in range(6):  # lunes a sábado
+                HorarioSucursal.objects.get_or_create(
+                    sucursal=suc,
+                    dia_semana=dia,
+                    defaults={
+                        "hora_apertura": time(9, 0),
+                        "hora_cierre": time(20, 0) if dia < 5 else time(14, 0),
+                    },
+                )
         self.stdout.write("  sucursales: creadas")
 
         # ---- Técnicos ----

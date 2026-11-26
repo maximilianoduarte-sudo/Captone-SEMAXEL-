@@ -6,7 +6,7 @@ from django.utils.http import unquote
 from accounts.roles import ROLES_ENCARGADOS
 from empresas.models import Empresa
 
-from .models import Sucursal
+from .models import HorarioSucursal, Sucursal
 
 
 class SucursalAdminForm(forms.ModelForm):
@@ -35,9 +35,18 @@ class SucursalAdminForm(forms.ModelForm):
         return encargados
 
 
+class HorarioSucursalInline(admin.TabularInline):
+    """Horario de atención por día, editable dentro de la sucursal."""
+
+    model = HorarioSucursal
+    extra = 0
+    max_num = 7
+
+
 @admin.register(Sucursal)
 class SucursalAdmin(admin.ModelAdmin):
     form = SucursalAdminForm
+    inlines = [HorarioSucursalInline]
     list_display = ("nombre", "empresa", "codigo", "ciudad", "telefono", "estado")
     list_filter = ("empresa", "estado", "ciudad")
     search_fields = ("nombre", "codigo", "ciudad", "empresa__nombre")

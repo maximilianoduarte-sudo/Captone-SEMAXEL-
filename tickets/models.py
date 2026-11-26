@@ -244,6 +244,28 @@ class OrdenTrabajo(models.Model):
         null=True,
         blank=True,
     )
+    # Llegada al local registrada desde la app con GPS. Permite medir el
+    # tiempo de respuesta del SLA (creación del ticket -> llegada).
+    fecha_llegada = models.DateTimeField("Fecha de llegada", null=True, blank=True)
+    llegada_latitud = models.DecimalField(
+        "Latitud de llegada", max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    llegada_longitud = models.DecimalField(
+        "Longitud de llegada", max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    llegada_precision_m = models.FloatField(
+        "Precisión informada por el GPS (m)", null=True, blank=True
+    )
+    llegada_distancia_m = models.PositiveIntegerField(
+        "Distancia a la sucursal (m)", null=True, blank=True
+    )
+    llegada_verificada = models.BooleanField(
+        "Llegada verificada",
+        null=True,
+        blank=True,
+        help_text="Sí: dentro del radio permitido. No: fuera del radio. "
+        "Vacío: la sucursal no tiene coordenadas y no se pudo verificar.",
+    )
     fecha_creacion = models.DateTimeField("Fecha de creación", auto_now_add=True)
     fecha_actualizacion = models.DateTimeField("Fecha de actualización", auto_now=True)
 
@@ -286,6 +308,27 @@ class OrdenTrabajo(models.Model):
         """Descripción del trabajo (reutiliza la del ticket)."""
         return self.ticket.descripcion
 
+    @property
+    def tiempo_respuesta_minutos(self):
+        """Minutos entre la creación del ticket y la llegada del técnico (o None)."""
+        if not self.fecha_llegada:
+            return None
+        return int((self.fecha_llegada - self.ticket.fecha_creacion).total_seconds() // 60)
+
+    @property
+    def sla_respuesta_minutos(self):
+        """Tiempo máximo de respuesta de la política SLA del ticket (o None)."""
+        politica = SLAPolicy.obtener(self.ticket.sucursal.empresa, self.ticket.prioridad)
+        return politica.tiempo_maximo_respuesta if politica else None
+
+    @property
+    def sla_respuesta_cumplido(self):
+        """True/False si se puede evaluar la respuesta contra el SLA; None si no."""
+        minutos, limite = self.tiempo_respuesta_minutos, self.sla_respuesta_minutos
+        if minutos is None or limite is None:
+            return None
+        return minutos <= limite
+
     # ---- Máquina de estados de la orden ----
     TRANSICIONES_VALIDAS = {
         Estado.ASIGNADA: {Estado.EN_EJECUCION, Estado.CANCELADA},
@@ -307,6 +350,64 @@ class OrdenTrabajo(models.Model):
     def puede_transicionar_a(self, estado_nuevo):
         """True si la transición hacia el estado indicado es válida."""
         return estado_nuevo in self.transiciones_validas()
+
+
+class EvidenciaOrden(models.Model):
+    """Foto de evidencia del trabajo, subida por el técnico desde la app."""
+
+    orden = models.ForeignKey(
+        OrdenTrabajo,
+        on_delete=models.CASCADE,
+        related_name="evidencias",
+        verbose_name="Orden de trabajo",
+    )
+    imagen = models.ImageField("Imagen", upload_to="evidencias_ordenes/%Y/%m/")
+    descripcion = models.CharField("Descripción", max_length=255, blank=True)
+    subida_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="evidencias_ordenes",
+        verbose_name="Subida por",
+    )
+    fecha_subida = models.DateTimeField("Fecha de subida", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Evidencia de orden"
+        verbose_name_plural = "Evidencias de orden"
+        ordering = ["fecha_subida"]
+
+    def __str__(self):
+        return self.descripcion or f"Evidencia {self.pk} de la orden {self.orden_id}"
+
+
+class FirmaConformidad(models.Model):
+    """Firma del encargado del local, capturada en el celular del técnico.
+
+    Deja constancia de que el encargado recibió el trabajo en el lugar.
+    """
+
+    orden = models.OneToOneField(
+        OrdenTrabajo,
+        on_delete=models.CASCADE,
+        related_name="firma",
+        verbose_name="Orden de trabajo",
+    )
+    imagen = models.ImageField("Imagen de la firma", upload_to="firmas/%Y/%m/")
+    nombre_firmante = models.CharField("Nombre de quien firma", max_length=150)
+    registrada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="firmas_registradas",
+        verbose_name="Registrada por",
+    )
+    fecha_firma = models.DateTimeField("Fecha de la firma", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Firma de conformidad"
+        verbose_name_plural = "Firmas de conformidad"
+
+    def __str__(self):
+        return f"Firma de {self.nombre_firmante} (orden {self.orden_id})"
 
 
 class Calificacion(models.Model):

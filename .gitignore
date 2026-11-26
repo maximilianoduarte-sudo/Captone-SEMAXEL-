@@ -40,3 +40,6 @@ Thumbs.db
 .env.local
 .env.*
 !.env.example
+
+# Configuración local de los scripts de arranque
+scripts/config.local.ps1

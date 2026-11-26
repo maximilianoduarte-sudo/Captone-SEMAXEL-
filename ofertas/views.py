@@ -3,7 +3,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils import timezone
 
 from accounts.models import Usuario
 from accounts.roles import (
@@ -13,10 +12,10 @@ from accounts.roles import (
     rol_usuario,
 )
 from tecnicos.models import Tecnico
-from tickets.models import OrdenTrabajo, Ticket, TicketHistorial
+from tickets.models import Ticket
 
 from .models import OfertaTicket
-from .services import expirar_ofertas_vencidas
+from .services import OfertaNoTomable, expirar_ofertas_vencidas, tomar_oferta
 
 
 def _ocultar_numero(request):
@@ -92,23 +91,15 @@ def tomar(request, oid):
     Solo el rol TECNICO puede tomar ofertas: el GESTOR las publica y
     administra pero no las toma (el superusuario queda habilitado por
     convención del sistema de permisos).
+
+    Las reglas viven en ofertas.services.tomar_oferta, que también usa la
+    API de la app móvil; esta vista solo traduce el resultado a mensajes y
+    redirecciones de la web.
     """
-    oferta = get_object_or_404(
-        OfertaTicket.objects.select_related("ticket__categoria__especialidad"),
-        pk=oid,
-    )
+    oferta = get_object_or_404(OfertaTicket, pk=oid)
 
     if not puede_ver_oferta(request.user, oferta):
         raise PermissionDenied
-
-    if oferta.estado != OfertaTicket.Estado.DISPONIBLE:
-        messages.warning(request, "Esta oferta ya no está disponible.")
-        return redirect("ofertas:detalle", oid=oferta.pk)
-
-    if oferta.fecha_vencimiento and oferta.fecha_vencimiento <= timezone.now():
-        expirar_ofertas_vencidas(usuario=request.user)
-        messages.warning(request, "Esta oferta venció y ya no está disponible.")
-        return redirect("ofertas:detalle", oid=oferta.pk)
 
     tecnico = _tecnico_actual(request)
     if tecnico is None:
@@ -120,59 +111,13 @@ def tomar(request, oid):
         )
         return redirect("ofertas:detalle", oid=oferta.pk)
 
-    ticket = oferta.ticket
-
-    if not ticket.puede_transicionar_a(Ticket.Estado.EN_EJECUCION):
-        messages.warning(request, "El ticket ya no permite tomar la oferta.")
-        return redirect("ofertas:disponibles")
-
-    # La categoría del ticket debe definir una especialidad: sin ella no hay
-    # forma de verificar la idoneidad del técnico que toma el trabajo.
-    especialidad = ticket.categoria.especialidad_id
-    if especialidad is None:
-        messages.warning(
-            request,
-            "La categoría del ticket no tiene especialidad definida. "
-            "Contacta a un administrador para que la configure antes de tomar la oferta.",
-        )
+    try:
+        orden = tomar_oferta(oferta, tecnico, usuario=request.user)
+    except OfertaNoTomable as error:
+        messages.warning(request, error.mensaje)
+        if error.codigo == "ticket_no_permite":
+            return redirect("ofertas:disponibles")
         return redirect("ofertas:detalle", oid=oferta.pk)
-
-    if not tecnico.especialidades.filter(pk=especialidad).exists():
-        messages.warning(
-            request,
-            "Esta oferta requiere la especialidad "
-            f"“{ticket.categoria.especialidad.nombre}”, que no está en tu perfil.",
-        )
-        return redirect("ofertas:detalle", oid=oferta.pk)
-
-    oferta.tecnico = tecnico
-    oferta.estado = OfertaTicket.Estado.TOMADA
-    oferta.fecha_tomada = timezone.now()
-    oferta.save()
-
-    orden, creada = OrdenTrabajo.objects.get_or_create(
-        ticket=ticket,
-        defaults={
-            "tecnico": tecnico,
-            "oferta": oferta,
-            "estado": OrdenTrabajo.Estado.ASIGNADA,
-        },
-    )
-
-    if ticket.estado != Ticket.Estado.EN_EJECUCION:
-        estado_anterior = ticket.estado
-        ticket.estado = Ticket.Estado.EN_EJECUCION
-        ticket.save()
-        TicketHistorial.objects.create(
-            ticket=ticket,
-            usuario=request.user if request.user.is_authenticated else ticket.creador,
-            estado_anterior=estado_anterior,
-            estado_nuevo=Ticket.Estado.EN_EJECUCION,
-            comentario=f"Oferta tomada por el técnico {tecnico.nombre}.",
-        )
-
-    tecnico.estado = Tecnico.Estado.OCUPADO
-    tecnico.save(update_fields=["estado"])
 
     messages.success(
         request,

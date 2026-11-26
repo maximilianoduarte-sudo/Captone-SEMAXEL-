@@ -83,6 +83,73 @@
                     </div>
                 </div>
             </div>
+
+            {# Registro en terreno: lo que el técnico envía desde la app móvil #}
+            <div class="card mb-3">
+                <div class="card-header bg-white"><strong><i class="bi bi-phone me-1"></i>Registro en terreno (app del técnico)</strong></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Llegada al local</div>
+                            {% if orden.fecha_llegada %}
+                            <strong>{{ orden.fecha_llegada|date:"d/m/Y H:i" }}</strong>
+                            {% if orden.llegada_verificada is None %}
+                            <span class="badge bg-secondary ms-1">No verificable</span>
+                            <div class="small text-muted">La sucursal no tiene coordenadas.</div>
+                            {% elif orden.llegada_verificada %}
+                            <span class="badge bg-success ms-1">Verificada</span>
+                            <div class="small text-muted">A {{ orden.llegada_distancia_m }} m de la sucursal.</div>
+                            {% else %}
+                            <span class="badge bg-warning text-dark ms-1">Fuera del radio</span>
+                            <div class="small text-muted">A {{ orden.llegada_distancia_m }} m de la sucursal.</div>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Sin registrar</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small mb-1">Tiempo de respuesta</div>
+                            {% if orden.tiempo_respuesta_minutos is not None %}
+                            <strong>{{ orden.tiempo_respuesta_minutos }} min</strong>
+                            {% if orden.sla_respuesta_cumplido is True %}
+                            <span class="badge bg-success ms-1">Cumple SLA ({{ orden.sla_respuesta_minutos }} min)</span>
+                            {% elif orden.sla_respuesta_cumplido is False %}
+                            <span class="badge bg-danger ms-1">Excede SLA ({{ orden.sla_respuesta_minutos }} min)</span>
+                            {% else %}
+                            <span class="badge bg-secondary ms-1">Sin política SLA</span>
+                            {% endif %}
+                            {% else %}
+                            <span class="text-muted">Se mide al registrar la llegada.</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-12">
+                            <div class="text-muted small mb-1">Fotos de evidencia</div>
+                            {% with evidencias=orden.evidencias.all %}
+                            {% if evidencias %}
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for evidencia in evidencias %}
+                                <a href="{{ evidencia.imagen.url }}" target="_blank" rel="noopener" title="{{ evidencia.descripcion }}">
+                                    <img src="{{ evidencia.imagen.url }}" alt="{{ evidencia.descripcion|default:'Evidencia' }}" class="rounded border" style="width: 96px; height: 96px; object-fit: cover;">
+                                </a>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted">Sin fotos.</span>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                        <div class="col-12">
+                            <div class="text-muted small mb-1">Firma de conformidad</div>
+                            {% if firma %}
+                            <img src="{{ firma.imagen.url }}" alt="Firma de {{ firma.nombre_firmante }}" class="border rounded bg-white" style="max-height: 120px; max-width: 100%;">
+                            <div class="small text-muted">{{ firma.nombre_firmante }} · {{ firma.fecha_firma|date:"d/m/Y H:i" }}</div>
+                            {% else %}
+                            <span class="text-muted">Sin firma.</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="col-lg-4">
@@ -109,10 +176,44 @@
                 </div>
             </div>
 
+            {% if contacto %}
+            <div class="card mb-3">
+                <div class="card-header bg-white"><strong><i class="bi bi-chat-dots me-1"></i>Contacto con la sucursal</strong></div>
+                <div class="card-body">
+                    <div class="fw-semibold">{{ contacto.sucursal.nombre }}</div>
+                    <div class="text-muted small mb-3">{{ contacto.sucursal.direccion }}</div>
+                    {% if contacto.enlace_whatsapp %}
+                    <a href="{{ contacto.enlace_whatsapp }}" target="_blank" rel="noopener" class="btn btn-success w-100 mb-2">
+                        <i class="bi bi-whatsapp me-1"></i> Escribir por WhatsApp
+                    </a>
+                    <a href="{{ contacto.enlace_telefono }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-telephone me-1"></i> Llamar: {{ contacto.telefono }}
+                    </a>
+                    {% else %}
+                    <p class="text-muted small">La sucursal no tiene un teléfono registrado.</p>
+                    {% endif %}
+                    {% if contacto.correo %}
+                    <a href="mailto:{{ contacto.correo }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-envelope me-1"></i> {{ contacto.correo }}
+                    </a>
+                    {% endif %}
+                    {% for encargado in contacto.encargados %}
+                    <div class="small text-muted">Encargado: {{ encargado.get_full_name|default:encargado.username }}{% if encargado.email %} · <a href="mailto:{{ encargado.email }}">{{ encargado.email }}</a>{% endif %}</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <div class="card">
                 <div class="card-header bg-white"><strong><i class="bi bi-lightning-charge me-1"></i>Acciones</strong></div>
                 <div class="card-body">
-                    {% if orden_terminal %}
+                    {% if es_tecnico and not orden_terminal %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-phone me-1"></i>
+                        Este trabajo se avanza desde la app <strong>SEMAXEL Técnico</strong>:
+                        registrar la llegada, iniciar, subir fotos, pedir la firma y resolver.
+                    </div>
+                    {% elif orden_terminal %}
                     <p class="text-muted mb-0">Esta orden está {{ orden.estado|estado_label|lower }}, no admite más cambios.</p>
                     {% elif form_estado.fields.estado.choices %}
                     <form method="post" action="{% url 'ordenes:cambiar_estado' orden.pk %}">

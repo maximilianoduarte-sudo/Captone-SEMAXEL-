@@ -39,6 +39,8 @@ class SucursalForm(forms.ModelForm):
             "correo",
             "encargados",
             "estado",
+            "latitud",
+            "longitud",
         ]
         widgets = {
             "nombre": forms.TextInput(attrs={"class": "form-control", "placeholder": "Nombre de la sucursal"}),
@@ -51,6 +53,8 @@ class SucursalForm(forms.ModelForm):
             "correo": forms.EmailInput(attrs={"class": "form-control", "placeholder": "sucursal@semaxel.cl"}),
             "encargados": forms.SelectMultiple(attrs={"class": "form-select"}),
             "estado": forms.Select(attrs={"class": "form-select"}),
+            "latitud": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "-33.437800"}),
+            "longitud": forms.NumberInput(attrs={"class": "form-control", "step": "0.000001", "placeholder": "-70.650400"}),
         }
 
     def clean_codigo(self):
